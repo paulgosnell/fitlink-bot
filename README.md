@@ -175,3 +175,36 @@ Find your bot on Telegram: \`@your_bot_username\`
 **Built with ❤️ for the health and fitness community**
 
 *Fitlink Bot - Where health data meets AI intelligence* 🚀
+
+## 🌐 **Web Dashboard**
+
+A beautiful landing page showcasing your bot's features:
+
+### **Deploy Web Dashboard** (Optional)
+```bash
+# Quick deploy to Vercel/Netlify
+./deploy-web.sh
+
+# Or manually upload web/public/ to any static host
+```
+
+**Hosting Options:**
+- **Vercel** (recommended) - Free tier with custom domains
+- **Netlify** - Free tier with form handling
+- **GitHub Pages** - Free with GitHub integration  
+- **Supabase Storage** - Keep everything in Supabase
+- **Any static host** - Just upload the `web/public/` folder
+
+The web dashboard is **purely informational** - all bot functionality runs serverlessly on Supabase Edge Functions. No backend hosting required!
+
+## 🚀 **Zero-Server Architecture**
+
+Your entire Fitlink Bot runs without traditional servers:
+
+- **Bot Logic**: Supabase Edge Functions (serverless)
+- **Database**: Supabase PostgreSQL (managed)
+- **AI Processing**: Claude API (serverless)
+- **OAuth Flows**: Edge Functions (serverless)
+- **Web Dashboard**: Static files (any CDN)
+
+**Total hosting cost**: Just pay for usage (API calls, database storage)
