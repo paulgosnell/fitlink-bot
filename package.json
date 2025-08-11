@@ -1,0 +1,32 @@
+{
+  "name": "fitlink-bot",
+  "version": "1.0.0",
+  "description": "AI-powered Telegram health bot combining Oura, Strava, and weather data",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "supabase functions serve --env-file .env.local",
+    "deploy": "supabase functions deploy",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "test": "deno test --allow-all",
+    "test:integration": "deno test --allow-all tests/integration/",
+    "lint": "deno lint",
+    "format": "deno fmt"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "health",
+    "oura",
+    "strava",
+    "ai",
+    "fitness",
+    "supabase"
+  ],
+  "author": "Paul Gosnell",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
