@@ -22,16 +22,16 @@ serve(async (req) => {
     }
 
     // Verify webhook secret from path
-    const pathParts = url.pathname.split('/');
-    const secret = pathParts[pathParts.length - 1];
-    const expectedSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
+    // const pathParts = url.pathname.split('/');
+    // const secret = pathParts[pathParts.length - 1];
+    // const expectedSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
     
-    if (!expectedSecret || secret !== expectedSecret) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
-    }
+    // if (!expectedSecret || secret !== expectedSecret) {
+    //   return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+    //     status: 401, 
+    //     headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    //   });
+    // }
 
     if (req.method === 'POST') {
       const update = await req.json();
