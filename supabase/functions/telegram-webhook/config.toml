@@ -1,0 +1,12 @@
+name = "telegram-webhook"
+verify_jwt = false
+
+[routes]
+include = [
+  "/telegram/webhook/*",
+  "/telegram-webhook/telegram/webhook/*",
+  "/telegram-webhook/healthz",
+  "/healthz"
+]
+
+
