@@ -232,38 +232,184 @@ async function handleDashboardCommand(
   botToken: string
 ): Promise<void> {
   try {
-    // Generate a secure dashboard token
-    const dashboardToken = await generateDashboardToken(user.id, supabase);
-    
-    // Create dashboard URL with user authentication
-    const baseUrl = 'https://fitlinkbot.netlify.app';
-    const dashboardUrl = `${baseUrl}/dashboard.html?user_id=${user.id}&token=${dashboardToken}`;
-    
-    const message = `📊 **Your Health Intelligence Dashboard**
-
-Access your personalized analytics dashboard with:
-• 30-day trend analysis
-• Predictive health alerts  
-• Peak performance windows
-• Micro-habit recommendations
-• Real-time health metrics
-
-🔒 **Secure Access**: This link is unique to you and expires in 24 hours.
-
-[🚀 Open Dashboard](${dashboardUrl})
-
-_Your health data is encrypted and secure._`;
-
-    await sendTelegramMarkdownMessage(botToken, chatId, message);
+    // Show dashboard summary directly in Telegram first
+    await showDashboardSummary(user, chatId, supabase, botToken);
     
   } catch (error) {
-    console.error("Error generating dashboard access:", error);
+    console.error("Error showing dashboard:", error);
     await sendTelegramMessage(
       botToken,
       chatId,
-      "Sorry, there was an error generating your dashboard access. Please try again later."
+      "Sorry, there was an error loading your dashboard. Please try again later."
     );
   }
+}
+
+async function showDashboardSummary(
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  try {
+    await sendTelegramMessage(botToken, chatId, "📊 Loading your health dashboard...");
+    
+    // Get recent health data for summary
+    const healthSummary = await generateQuickHealthSummary(user.id, supabase);
+    
+    if (!healthSummary) {
+      await sendTelegramMarkdownMessage(
+        botToken,
+        chatId,
+        `📊 **Health Dashboard**
+
+_Connect your devices to see personalized analytics!_
+
+**Available when connected:**
+• 30-day trend analysis
+• Predictive health alerts
+• Peak performance windows
+• Micro-habit coaching
+
+Use /settings to connect your Oura Ring and Strava accounts.`,
+        {
+          inline_keyboard: [[
+            { text: "⚙️ Connect Devices", callback_data: "settings" }
+          ]]
+        }
+      );
+      return;
+    }
+    
+    // Format dashboard summary message
+    const summaryMessage = formatDashboardSummary(healthSummary, user);
+    
+    // Create dashboard navigation keyboard
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: "📈 Deep Analysis", callback_data: "dashboard_deep" },
+          { text: "🎯 Habits", callback_data: "dashboard_habits" }
+        ],
+        [
+          { text: "⚡ Alerts", callback_data: "dashboard_alerts" },
+          { text: "📱 Full Web Dashboard", web_app: { url: await generateWebAppUrl(user.id, supabase) } }
+        ],
+        [
+          { text: "🔄 Refresh", callback_data: "dashboard_refresh" },
+          { text: "🏠 Main Menu", callback_data: "main_menu" }
+        ]
+      ]
+    };
+    
+    await sendTelegramMarkdownMessage(botToken, chatId, summaryMessage, keyboard);
+    
+  } catch (error) {
+    console.error("Error in dashboard summary:", error);
+    await sendTelegramMessage(
+      botToken,
+      chatId,
+      "Unable to load dashboard data. Make sure your devices are connected in /settings."
+    );
+  }
+}
+
+async function generateQuickHealthSummary(userId: string, supabase: SupabaseClient) {
+  try {
+    // Get last 7 days of sleep data
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [sleepData, activityData] = await Promise.all([
+      supabase
+        .from('oura_sleep')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', sevenDaysAgo.toISOString().split('T')[0])
+        .order('date', { ascending: false })
+        .limit(7),
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('start_time', sevenDaysAgo.toISOString())
+        .order('start_time', { ascending: false })
+        .limit(10)
+    ]);
+
+    if ((!sleepData.data || sleepData.data.length === 0) && 
+        (!activityData.data || activityData.data.length === 0)) {
+      return null;
+    }
+
+    return {
+      sleep: sleepData.data || [],
+      activities: activityData.data || [],
+      hasData: true
+    };
+  } catch (error) {
+    console.error("Error getting quick health summary:", error);
+    return null;
+  }
+}
+
+function formatDashboardSummary(data: any, user: any): string {
+  const { sleep, activities } = data;
+  
+  let message = `📊 **${user.first_name}'s Health Dashboard**\n\n`;
+  
+  // Sleep Summary
+  if (sleep.length > 0) {
+    const latestSleep = sleep[0];
+    const avgEfficiency = sleep.reduce((sum: number, s: any) => sum + (s.sleep_efficiency || 0), 0) / sleep.length;
+    const avgHRV = sleep.filter((s: any) => s.hrv_avg > 0).reduce((sum: number, s: any) => sum + s.hrv_avg, 0) / sleep.filter((s: any) => s.hrv_avg > 0).length || 0;
+    
+    message += `💤 **Sleep (7 days)**\n`;
+    message += `• Latest: ${Math.round((latestSleep.total_sleep_minutes || 0) / 60 * 10) / 10}h (${latestSleep.sleep_efficiency || 0}% efficiency)\n`;
+    message += `• Avg Efficiency: ${Math.round(avgEfficiency)}%\n`;
+    if (avgHRV > 0) {
+      message += `• Avg HRV: ${Math.round(avgHRV)}\n`;
+    }
+    message += `\n`;
+  }
+  
+  // Activity Summary
+  if (activities.length > 0) {
+    const totalTSS = activities.reduce((sum: number, a: any) => sum + (a.tss_estimated || 0), 0);
+    const totalDuration = activities.reduce((sum: number, a: any) => sum + (a.duration_seconds || 0), 0);
+    
+    message += `🏃 **Training (7 days)**\n`;
+    message += `• Sessions: ${activities.length}\n`;
+    message += `• Total Time: ${Math.round(totalDuration / 3600 * 10) / 10}h\n`;
+    if (totalTSS > 0) {
+      message += `• Training Load: ${Math.round(totalTSS)} TSS\n`;
+    }
+    message += `\n`;
+  }
+  
+  // Quick Status
+  message += `⚡ **Quick Status**\n`;
+  
+  if (sleep.length >= 3) {
+    const recentSleep = sleep.slice(0, 3);
+    const sleepTrend = recentSleep[0].sleep_efficiency > recentSleep[2].sleep_efficiency ? "↗️ Improving" : "↘️ Declining";
+    message += `• Sleep Trend: ${sleepTrend}\n`;
+  }
+  
+  if (activities.length >= 2) {
+    const recentActivities = activities.slice(0, 2);
+    const isActive = recentActivities.length > 0 && new Date(recentActivities[0].start_time) > new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    message += `• Activity: ${isActive ? "🟢 Active" : "🟡 Rest Phase"}\n`;
+  }
+  
+  message += `\n_Use buttons below to explore detailed analytics_ 👇`;
+  
+  return message;
+}
+
+async function generateWebAppUrl(userId: string, supabase: SupabaseClient): Promise<string> {
+  const dashboardToken = await generateDashboardToken(userId, supabase);
+  return `https://fitlinkbot.netlify.app/dashboard.html?user_id=${userId}&token=${dashboardToken}`;
 }
 
 async function generateDashboardToken(userId: string, supabase: SupabaseClient): Promise<string> {
@@ -494,12 +640,326 @@ async function handleCallbackQuery(
       await handleFeedback(data === 'feedback_positive' ? 1 : -1, user, supabase, botToken, chatId);
       break;
     
+    case 'dashboard_deep':
+      await handleDeepBriefCommand(user, chatId, supabase, botToken);
+      break;
+      
+    case 'dashboard_habits':
+      await handleDashboardHabits(user, chatId, supabase, botToken);
+      break;
+      
+    case 'dashboard_alerts':
+      await handleDashboardAlerts(user, chatId, supabase, botToken);
+      break;
+      
+    case 'dashboard_refresh':
+      await showDashboardSummary(user, chatId, supabase, botToken);
+      break;
+    
     default:
       if (data.startsWith('connect_')) {
         const provider = data.replace('connect_', '') as 'oura' | 'strava';
         await handleOAuthStart(provider, user, supabase, botToken, chatId);
       }
   }
+}
+
+async function handleDashboardHabits(
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  try {
+    await sendTelegramMessage(botToken, chatId, "🎯 Generating your personalized habits...");
+    
+    // Get recent health data for habit recommendations
+    const healthSummary = await generateQuickHealthSummary(user.id, supabase);
+    
+    if (!healthSummary) {
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "Connect your devices first to get personalized habit recommendations! Use /settings to get started."
+      );
+      return;
+    }
+    
+    const habits = generatePersonalizedHabits(healthSummary, user);
+    const habitMessage = formatHabitsMessage(habits, user.first_name || 'there');
+    
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: "📊 Back to Dashboard", callback_data: "dashboard_refresh" },
+          { text: "📈 Deep Analysis", callback_data: "dashboard_deep" }
+        ],
+        [
+          { text: "🏠 Main Menu", callback_data: "main_menu" }
+        ]
+      ]
+    };
+    
+    await sendTelegramMarkdownMessage(botToken, chatId, habitMessage, keyboard);
+    
+  } catch (error) {
+    console.error("Error showing habits:", error);
+    await sendTelegramMessage(
+      botToken,
+      chatId,
+      "Sorry, there was an error generating your habits. Please try again."
+    );
+  }
+}
+
+async function handleDashboardAlerts(
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  try {
+    await sendTelegramMessage(botToken, chatId, "⚡ Checking your health alerts...");
+    
+    // Get recent health data for alerts
+    const healthSummary = await generateQuickHealthSummary(user.id, supabase);
+    
+    if (!healthSummary) {
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "Connect your devices to receive personalized health alerts! Use /settings to get started."
+      );
+      return;
+    }
+    
+    const alerts = generateHealthAlerts(healthSummary);
+    const alertMessage = formatAlertsMessage(alerts, user.first_name || 'there');
+    
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: "📊 Back to Dashboard", callback_data: "dashboard_refresh" },
+          { text: "🎯 View Habits", callback_data: "dashboard_habits" }
+        ],
+        [
+          { text: "🏠 Main Menu", callback_data: "main_menu" }
+        ]
+      ]
+    };
+    
+    await sendTelegramMarkdownMessage(botToken, chatId, alertMessage, keyboard);
+    
+  } catch (error) {
+    console.error("Error showing alerts:", error);
+    await sendTelegramMessage(
+      botToken,
+      chatId,
+      "Sorry, there was an error checking your health alerts. Please try again."
+    );
+  }
+}
+
+function generatePersonalizedHabits(healthSummary: any, user: any): any[] {
+  const { sleep, activities } = healthSummary;
+  const habits = [];
+  
+  // Sleep-based habits
+  if (sleep.length > 0) {
+    const avgEfficiency = sleep.reduce((sum: number, s: any) => sum + (s.sleep_efficiency || 0), 0) / sleep.length;
+    const avgDuration = sleep.reduce((sum: number, s: any) => sum + (s.total_sleep_minutes || 0), 0) / sleep.length / 60;
+    
+    if (avgEfficiency < 80) {
+      habits.push({
+        time: "Evening (9:00 PM)",
+        icon: "🌙",
+        title: "Sleep Optimization",
+        description: `Your sleep efficiency is ${Math.round(avgEfficiency)}%. Try dimming lights 2 hours before bed to improve sleep quality.`,
+        category: "sleep"
+      });
+    }
+    
+    if (avgDuration < 7) {
+      habits.push({
+        time: "Bedtime",
+        icon: "⏰",
+        title: "Sleep Duration",
+        description: `You're averaging ${avgDuration.toFixed(1)}h sleep. Aim to go to bed 30 minutes earlier for optimal recovery.`,
+        category: "sleep"
+      });
+    }
+  }
+  
+  // Activity-based habits
+  if (activities.length > 0) {
+    const totalTSS = activities.reduce((sum: number, a: any) => sum + (a.tss_estimated || 0), 0);
+    
+    if (totalTSS > 300) {
+      habits.push({
+        time: "Post-Workout",
+        icon: "❄️",
+        title: "Recovery Boost",
+        description: "High training load detected. Try 10-15 minutes of cold exposure after workouts to enhance recovery.",
+        category: "recovery"
+      });
+    } else if (totalTSS < 100 && activities.length < 3) {
+      habits.push({
+        time: "Morning (7:00 AM)",
+        icon: "🚶",
+        title: "Movement Activation",
+        description: "Low activity this week. Start with a 15-minute morning walk to boost energy and circulation.",
+        category: "activity"
+      });
+    }
+  }
+  
+  // Default habits if no data
+  if (habits.length === 0) {
+    habits.push(
+      {
+        time: "Morning (7:00 AM)",
+        icon: "☀️",
+        title: "Circadian Reset",
+        description: "Get 10-15 minutes of natural sunlight within 30 minutes of waking to optimize your sleep-wake cycle.",
+        category: "general"
+      },
+      {
+        time: "Evening (8:00 PM)",
+        icon: "📱",
+        title: "Digital Sunset",
+        description: "Reduce blue light exposure 2 hours before bed to improve sleep quality and HRV recovery.",
+        category: "general"
+      }
+    );
+  }
+  
+  return habits.slice(0, 3); // Limit to 3 habits for focus
+}
+
+function generateHealthAlerts(healthSummary: any): any[] {
+  const { sleep, activities } = healthSummary;
+  const alerts = [];
+  
+  // Sleep alerts
+  if (sleep.length >= 3) {
+    const recentSleep = sleep.slice(0, 3);
+    const avgEfficiency = recentSleep.reduce((sum: number, s: any) => sum + (s.sleep_efficiency || 0), 0) / recentSleep.length;
+    const hrvValues = recentSleep.map((s: any) => s.hrv_avg).filter((h: number) => h > 0);
+    
+    if (avgEfficiency < 70) {
+      alerts.push({
+        type: "warning",
+        icon: "⚠️",
+        title: "Low Sleep Efficiency",
+        message: `Sleep efficiency dropped to ${Math.round(avgEfficiency)}% over last 3 days. Consider sleep hygiene improvements.`,
+        priority: "high"
+      });
+    }
+    
+    if (hrvValues.length >= 2) {
+      const hrvTrend = ((hrvValues[0] - hrvValues[hrvValues.length - 1]) / hrvValues[hrvValues.length - 1]) * 100;
+      if (hrvTrend < -15) {
+        alerts.push({
+          type: "alert",
+          icon: "🚨",
+          title: "HRV Declining",
+          message: `HRV dropped ${Math.abs(Math.round(hrvTrend))}% recently. Consider reducing training intensity and prioritizing recovery.`,
+          priority: "high"
+        });
+      }
+    }
+  }
+  
+  // Training alerts
+  if (activities.length > 0) {
+    const recentTSS = activities.slice(0, 3).reduce((sum: number, a: any) => sum + (a.tss_estimated || 0), 0);
+    const weeklyTSS = activities.reduce((sum: number, a: any) => sum + (a.tss_estimated || 0), 0);
+    
+    if (weeklyTSS > 400 && activities.length > 6) {
+      alerts.push({
+        type: "warning",
+        icon: "🏃‍♂️",
+        title: "High Training Load",
+        message: `Weekly TSS: ${Math.round(weeklyTSS)}. Monitor recovery markers closely and consider a rest day.`,
+        priority: "medium"
+      });
+    }
+  }
+  
+  // Positive alerts
+  if (sleep.length >= 7) {
+    const weekAvgEfficiency = sleep.reduce((sum: number, s: any) => sum + (s.sleep_efficiency || 0), 0) / sleep.length;
+    if (weekAvgEfficiency > 85) {
+      alerts.push({
+        type: "positive",
+        icon: "✅",
+        title: "Excellent Sleep Pattern",
+        message: `Outstanding ${Math.round(weekAvgEfficiency)}% average sleep efficiency this week! Keep up the great routine.`,
+        priority: "low"
+      });
+    }
+  }
+  
+  // Default positive message if no issues
+  if (alerts.length === 0) {
+    alerts.push({
+      type: "positive",
+      icon: "💪",
+      title: "All Systems Go",
+      message: "No health alerts detected. Your recovery patterns look stable. Keep up the great work!",
+      priority: "low"
+    });
+  }
+  
+  return alerts;
+}
+
+function formatHabitsMessage(habits: any[], userName: string): string {
+  let message = `🎯 **${userName}'s Personalized Habits**\n\n`;
+  message += `_Based on your recent health patterns:_\n\n`;
+  
+  habits.forEach((habit, index) => {
+    message += `${habit.icon} **${habit.title}**\n`;
+    message += `⏰ ${habit.time}\n`;
+    message += `${habit.description}\n\n`;
+  });
+  
+  message += `💡 _Focus on 1-2 habits first, then build your routine gradually._`;
+  
+  return message;
+}
+
+function formatAlertsMessage(alerts: any[], userName: string): string {
+  let message = `⚡ **${userName}'s Health Alerts**\n\n`;
+  
+  const highAlerts = alerts.filter(a => a.priority === 'high');
+  const mediumAlerts = alerts.filter(a => a.priority === 'medium');
+  const positiveAlerts = alerts.filter(a => a.type === 'positive');
+  
+  if (highAlerts.length > 0) {
+    message += `🚨 **Immediate Attention**\n`;
+    highAlerts.forEach(alert => {
+      message += `${alert.icon} ${alert.title}: ${alert.message}\n\n`;
+    });
+  }
+  
+  if (mediumAlerts.length > 0) {
+    message += `⚠️ **Monitor Closely**\n`;
+    mediumAlerts.forEach(alert => {
+      message += `${alert.icon} ${alert.title}: ${alert.message}\n\n`;
+    });
+  }
+  
+  if (positiveAlerts.length > 0) {
+    message += `✅ **Good News**\n`;
+    positiveAlerts.forEach(alert => {
+      message += `${alert.icon} ${alert.title}: ${alert.message}\n\n`;
+    });
+  }
+  
+  message += `_Alerts update based on your latest health data._`;
+  
+  return message;
 }
 
 async function handleFeedback(
