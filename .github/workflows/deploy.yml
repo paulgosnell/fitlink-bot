@@ -22,9 +22,16 @@ jobs:
         SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       run: |
+        # Deploy all functions
         supabase functions deploy telegram --project-ref $PROJECT_REF
+        supabase functions deploy telegram-webhook --project-ref $PROJECT_REF
+        supabase functions deploy telegram-poll --project-ref $PROJECT_REF
         supabase functions deploy oauth-oura --project-ref $PROJECT_REF
         supabase functions deploy oauth-strava --project-ref $PROJECT_REF
+        supabase functions deploy data-sync-oura --project-ref $PROJECT_REF
+        supabase functions deploy daily-briefings --project-ref $PROJECT_REF
+        supabase functions deploy oauth-test --project-ref $PROJECT_REF
+        supabase functions deploy test-db --project-ref $PROJECT_REF
         
     - name: Update Database Schema
       env:
