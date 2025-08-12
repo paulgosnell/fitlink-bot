@@ -142,7 +142,15 @@ Click the link below to securely connect your Oura Ring to Fitlink Bot:
 
 This will allow me to analyze your sleep, readiness, and activity data for personalized health insights.`;
           } else if (data === 'connect_strava') {
-            responseText = "🚴 *Strava integration coming soon!*\n\nWe're working on connecting your training data for even better performance insights.";
+            const userId = callbackQuery.from.id;
+            const connectUrl = `${supabaseUrl}/functions/v1/oauth-strava/start?user_id=${userId}`;
+            responseText = `🔗 *Connect your Strava Account*
+
+Click the link below to securely connect your Strava account to Fitlink Bot:
+
+[Connect Strava](${connectUrl})
+
+This will allow me to analyze your training activities and provide personalized performance insights.`;
           } else if (data === 'brief') {
             responseText = "📊 *Health Brief*\n\nConnect your Oura Ring first to get personalized health insights!";
           } else if (data === 'deep_brief') {

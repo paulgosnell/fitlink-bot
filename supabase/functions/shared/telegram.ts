@@ -198,6 +198,14 @@ async function handleCallbackQuery(
       await handleConnectStrava(chatId, userId, botToken);
       break;
     
+    case "disconnect_strava":
+      await handleDisconnectStrava(chatId, userId, supabase, botToken);
+      break;
+    
+    case "disconnect_oura":
+      await handleDisconnectOura(chatId, userId, supabase, botToken);
+      break;
+    
     case "end_health_session":
       userStates.delete(userId);
       await sendTelegramMessage(
@@ -407,7 +415,7 @@ async function handleConnectStrava(chatId: number, userId: number, botToken: str
   const stravaClientId = Deno.env.get("STRAVA_CLIENT_ID");
   const baseUrl = Deno.env.get("BASE_URL");
   
-  const authUrl = `https://www.strava.com/oauth/authorize?client_id=${stravaClientId}&response_type=code&redirect_uri=${baseUrl}/oauth-strava&approval_prompt=force&scope=read,activity:read_all&state=${userId}`;
+  const authUrl = `${baseUrl}/oauth-strava/start?user_id=${userId}`;
   
   const message = `🔴 *Connect Your Strava Account*
 
@@ -423,6 +431,62 @@ Click the button below to authorize Fitlink Bot to access your Strava activities
   };
 
   await sendTelegramMessage(botToken, chatId, message, keyboard);
+}
+
+async function handleDisconnectStrava(chatId: number, userId: number, supabase: any, botToken: string): Promise<void> {
+  try {
+    const { data: user } = await supabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", userId)
+      .single();
+
+    if (!user) {
+      await sendTelegramMessage(botToken, chatId, "❌ User not found. Please use /start first.");
+      return;
+    }
+
+    // Deactivate the Strava provider
+    await supabase
+      .from("providers")
+      .update({ is_active: false })
+      .eq("user_id", user.id)
+      .eq("provider", "strava");
+
+    await sendTelegramMessage(botToken, chatId, "🔌 *Strava Disconnected*\n\nYour Strava account has been disconnected from Fitlink Bot. You can reconnect anytime using /connect_strava.");
+    
+  } catch (error) {
+    console.error("Error disconnecting Strava:", error);
+    await sendTelegramMessage(botToken, chatId, "❌ Error disconnecting Strava. Please try again.");
+  }
+}
+
+async function handleDisconnectOura(chatId: number, userId: number, supabase: any, botToken: string): Promise<void> {
+  try {
+    const { data: user } = await supabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", userId)
+      .single();
+
+    if (!user) {
+      await sendTelegramMessage(botToken, chatId, "❌ User not found. Please use /start first.");
+      return;
+    }
+
+    // Deactivate the Oura provider
+    await supabase
+      .from("providers")
+      .update({ is_active: false })
+      .eq("user_id", user.id)
+      .eq("provider", "oura");
+
+    await sendTelegramMessage(botToken, chatId, "🔌 *Oura Ring Disconnected*\n\nYour Oura Ring has been disconnected from Fitlink Bot. You can reconnect anytime using /connect_oura.");
+    
+  } catch (error) {
+    console.error("Error disconnecting Oura:", error);
+    await sendTelegramMessage(botToken, chatId, "❌ Error disconnecting Oura. Please try again.");
+  }
 }
 
 async function handleBriefingCommand(
@@ -538,9 +602,10 @@ async function handleStatusCommand(
     }
 
     const { data: tokens } = await supabase
-      .from("oauth_tokens")
+      .from("providers")
       .select("provider")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("is_active", true);
 
     const connectedProviders = tokens?.map(t => t.provider) || [];
     
