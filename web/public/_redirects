@@ -1,0 +1,7 @@
+# Netlify redirects for SPA behavior
+/*    /index.html   200
+
+# Security redirects
+/admin/*    /    301
+/.env*      /    301
+/config/*   /    301

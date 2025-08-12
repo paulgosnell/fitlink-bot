@@ -5,12 +5,20 @@
 
 # Supabase
 .supabase/
+<<<<<<< HEAD
 
 # Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+=======
+supabase/.env
+
+# Dependencies
+node_modules/
+deno.lock
+>>>>>>> a3a4d3c1f78ddd6a6e6946002f437df1a523a817
 
 # IDE
 .vscode/
@@ -26,6 +34,7 @@ Thumbs.db
 *.log
 logs/
 
+<<<<<<< HEAD
 # Cache
 .cache/
 .temp/
@@ -45,3 +54,8 @@ secrets.json
 # Backup files
 *.backup
 *.bak
+=======
+# Temporary files
+*.tmp
+*.temp
+>>>>>>> a3a4d3c1f78ddd6a6e6946002f437df1a523a817

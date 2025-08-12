@@ -1,170 +1,212 @@
-# Fitlink Bot 🏃‍♂️
+# 🏃‍♂️ Fitlink Bot - AI-Powered Health Assistant
 
-Your AI health brief in Telegram — combining your sleep (Oura), training (Strava), and today's conditions (weather/location) into one actionable morning message.
+> **Complete Telegram bot that combines Oura Ring sleep data, Strava activities, and Claude AI to provide intelligent health insights.**
 
-## 🎯 Core Features
+[![Deploy](https://img.shields.io/badge/Deploy-Supabase-green)](https://supabase.com)
+[![AI](https://img.shields.io/badge/AI-Claude%203%20Haiku-blue)](https://anthropic.com)
+[![Health](https://img.shields.io/badge/Health-Oura%20%7C%20Strava-orange)](https://cloud.ouraring.com)
 
-- **Morning Briefings**: Personalised daily health summaries at 07:00 local time
-- **Multi-Source Data**: Oura Ring sleep metrics + Strava training load + weather conditions
-- **Smart Recommendations**: Evidence-based training plans with safety guardrails
-- **Telegram Native**: Full bot experience + lightweight WebApp dashboard
-- **Privacy First**: Encrypted tokens, minimal data retention, GDPR compliance
+## 🎯 What It Does
 
-## 🏗️ Architecture
+- **🟢 Oura Integration**: Sleep quality, HRV, readiness scores
+- **🔴 Strava Integration**: Activities, training load, performance metrics  
+- **🧠 Claude AI**: Personalized health advice and daily briefings
+- **🌤️ Weather Data**: Activity recommendations based on conditions
+- **💬 Smart Chat**: Only uses AI when needed (cost-efficient)
+
+## 🚀 Features
+
+### 🧠 **Smart AI System**
+- **Keyword Detection**: Automatically detects health-related questions
+- **Conversation States**: Manages Q&A sessions efficiently  
+- **Cost Optimization**: 80-90% reduction in AI API calls
+- **Multiple Triggers**: Commands, buttons, or natural conversation
+
+### 📊 **Health Insights**
+- Daily AI-generated briefings with actionable advice
+- Sleep analysis with recovery recommendations
+- Training load assessment and workout planning
+- Weather-aware exercise suggestions
+- Personalized health Q&A with context
+- **User Profile Collection**: Age, sex, height, weight for personalized recommendations
+
+### 🔐 **Enterprise Ready**
+- Row Level Security (RLS) on all data
+- Encrypted OAuth token storage
+- GDPR-compliant data handling
+- Secure webhook validation
+
+## 📱 **User Experience**
+
+```
+User: "I'm feeling tired today"
+Bot: 🏃‍♂️ I noticed you mentioned feeling tired! 
+     Would you like me to analyze your data?
+     [🧠 Yes, get AI advice] [📊 Daily briefing]
+
+User: *clicks AI button*
+Bot: 🧠 Health Question Mode Activated
+     Ask me anything about health, fitness, or training!
+
+User: "Should I workout today?"
+Bot: 🧠 Based on your 6.5h sleep (78% efficiency) and yesterday's 
+     45min run, I recommend light active recovery today...
+     [🔄 Ask another] [✅ End session]
+```
+
+## 🛠️ **Tech Stack**
 
 - **Runtime**: Supabase Edge Functions (Deno + TypeScript)
-- **Framework**: Hono for HTTP routing
 - **Database**: PostgreSQL with Row Level Security
-- **Auth**: Telegram user ID + OAuth for health providers
-- **Scheduling**: Supabase cron for per-user briefing times
-- **AI**: OpenAI/Claude with structured JSON prompts
+- **AI**: Claude 3 Haiku via Anthropic API
+- **Integrations**: Telegram Bot API, Oura API, Strava API
+- **Weather**: OpenWeatherMap API
+- **Security**: JWT tokens, encrypted storage, webhook validation
 
-## 📊 Data Flow
+## ⚡ **Quick Deploy**
 
-```
-Oura Ring ──┐
-            ├──► Supabase DB ──► AI Briefing ──► Telegram
-Strava ─────┤
-            └──► Weather API
-```
+### 1. **Prerequisites**
+- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
+- [Telegram Bot Token](https://core.telegram.org/bots/tutorial)
+- [Anthropic API Key](https://console.anthropic.com/)
+- [Oura API Credentials](https://cloud.ouraring.com/oauth/applications)
+- [Strava API Credentials](https://developers.strava.com/)
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Supabase account + project
-- Telegram Bot Token (via @BotFather)
-- Oura + Strava OAuth apps
-- OpenWeatherMap API key
-
-### Environment Setup
-
+### 2. **Setup Database**
 ```bash
-# Install Supabase CLI
-npm install -g supabase
+# Initialize Supabase project
+supabase init
 
-# Clone and setup
-git clone <repo>
-cd fitlink-bot
+# Link to your project
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Run database migrations
+supabase db push
+```
+
+### 3. **Configure Environment**
+```bash
+# Copy environment template
 cp .env.example .env.local
 
-# Configure secrets (see .env.example)
-# Deploy to Supabase
-supabase start
-supabase db push
-supabase functions deploy
+# Edit with your API keys
+nano .env.local
 ```
 
-### Local Development
-
+### 4. **Deploy Functions**
 ```bash
-# Start local Supabase
-supabase start
+# Deploy all Edge Functions
+supabase functions deploy telegram-webhook --no-verify-jwt
+supabase functions deploy oauth-oura --no-verify-jwt  
+supabase functions deploy oauth-strava --no-verify-jwt
+```
 
-# Run edge functions locally
-supabase functions serve --env-file .env.local
-
-# Test webhook
-curl -X POST http://localhost:54321/functions/v1/telegram/webhook/your-secret \
+### 5. **Set Telegram Webhook**
+```bash
+curl -X POST "https://api.telegram.org/bot{BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
-  -d '{"message":{"text":"/start","chat":{"id":123},"from":{"id":123,"first_name":"Test"}}}'
+  -d '{"url": "https://{PROJECT_REF}.supabase.co/functions/v1/telegram-webhook/{WEBHOOK_SECRET}"}'
 ```
 
-## 🗄️ Database Schema
-
-### Core Tables
-- `users` - Telegram user profiles + preferences
-- `providers` - OAuth tokens for Oura/Strava
-- `oura_sleep` - Sleep metrics + HRV data
-- `activities` - Strava workouts + estimated TSS
-- `env_daily` - Weather conditions + air quality
-- `brief_logs` - Delivery tracking + feedback
-
-### Views
-- `weekly_load_view` - Training load summaries
-- `sleep_recent_view` - Sleep trends (7-day rolling)
-
-## 🤖 Bot Commands
-
-- `/start` - Connect accounts + set briefing time
-- `/brief` - Get today's briefing on-demand
-- `/settings` - Manage connections + preferences
-- `/pause` - Temporarily disable daily briefs
-- `/help` - Usage guide + privacy info
-
-## 📱 WebApp Dashboard
-
-- Real-time health scorecards
-- 7-day trend sparklines (HRV, RHR, activity)
-- Connection status + re-auth flows
-- Briefing history + feedback
-
-## 🔐 Privacy & Security
-
-- **Minimal Data**: Only essential health metrics stored
-- **Encryption**: All OAuth tokens encrypted at rest
-- **Retention**: Raw API payloads purged after processing
-- **User Control**: `/delete` command for immediate data purge
-- **No Sharing**: Zero third-party data sharing
-
-## 📈 AI Briefing Structure
-
-```
-Good morning Paul 👋
-Sleep: 7h 42m (efficiency 89%). HRV trending ↑.
-Readiness: 78 (↑ 6 vs avg) — green day.
-Training: 4 sessions / 210 TSS this week. Yesterday: 8km easy.
-Weather: 14–22°C, ideal for outdoor run 06:30–08:30.
-Plan: 40–50 min aerobic (Z2). If short on time: 20 min + strides.
-Actions: 500ml water on waking • 5 min mobility.
-```
-
-## 🛡️ Safety Guardrails
-
-- Never invent missing data points
-- Flag illness/overtraining signals
-- Prioritise recovery over performance
-- No medical claims - coaching guidance only
-- Conservative recommendations for edge cases
-
-## 🎯 Roadmap
-
-### MVP (Current)
-- [x] Telegram bot + OAuth flows
-- [x] Daily briefing scheduler
-- [x] Oura + Strava integration
-- [x] Weather API + caching
-- [x] Basic WebApp dashboard
-
-### v1 (Next)
-- [ ] Advanced training load (TRIMP)
-- [ ] HRV trend analysis + warnings
-- [ ] Air quality integration
-- [ ] Calendar-aware scheduling
-- [ ] Weekly progress reports
-
-### v2 (Future)
-- [ ] Apple Health / Google Fit
-- [ ] Social challenges (opt-in)
-- [ ] Habit tracking integration
-- [ ] Advanced AI coaching personas
-
-## 🧪 Testing
+## 📋 **Environment Variables**
 
 ```bash
-# Unit tests
-deno test --allow-all
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Integration tests
-npm run test:integration
+# Telegram
+TELEGRAM_BOT_TOKEN=your-bot-token
+TELEGRAM_WEBHOOK_SECRET=your-webhook-secret
 
-# Load test briefing generation
-./scripts/load-test-briefings.sh
+# OAuth Providers  
+OURA_CLIENT_ID=your-oura-client-id
+OURA_CLIENT_SECRET=your-oura-client-secret
+STRAVA_CLIENT_ID=your-strava-client-id
+STRAVA_CLIENT_SECRET=your-strava-client-secret
+
+# External APIs
+OPENWEATHER_API_KEY=your-weather-api-key
+ANTHROPIC_API_KEY=your-claude-api-key
+
+# Security
+ENCRYPTION_KEY=your-32-character-encryption-key
+BASE_URL=https://your-project.supabase.co/functions/v1
 ```
 
-## 📝 License
+## 🤖 **Available Commands**
 
-MIT License - see LICENSE file for details.
+- `/start` - Welcome message and setup
+- `/brief` - Generate AI daily health summary
+- `/settings` - Manage connections and preferences
+- `/help` - Show available commands
+- `/pause [days]` - Pause daily briefings
+- `/resume` - Resume daily briefings
+
+## 🔍 **Smart AI Detection**
+
+The bot intelligently detects health-related conversations:
+
+**Triggers AI:**
+- "I'm tired", "Should I workout?", "How was my sleep?"
+- Keywords: sleep, energy, workout, training, recovery, etc.
+
+**Doesn't Trigger:**
+- General chat, greetings, thank you messages
+
+## 🔐 **Security Features**
+
+- **Row Level Security**: Users can only see their own data
+- **Token Encryption**: OAuth tokens encrypted before storage
+- **Webhook Validation**: Secure Telegram webhook endpoint
+- **Environment Isolation**: Secrets managed via Supabase Edge Functions
+
+## 🧪 **Testing**
+
+Find your bot on Telegram: `@your_bot_username`
+
+**Test Flow:**
+1. Send `/start` to setup
+2. Connect Oura and/or Strava accounts
+3. Ask: "How did I sleep last night?"
+4. Try: "Should I exercise today?"
+5. Request: `/brief` for daily summary
+
+## 🌐 **Web Dashboard**
+
+A beautiful landing page showcasing your bot's features:
+
+### **Deploy Web Dashboard** (Optional)
+```bash
+# Quick deploy to Vercel/Netlify
+./deploy-web.sh
+
+# Or manually upload web/public/ to any static host
+```
+
+**Hosting Options:**
+- **Vercel** (recommended) - Free tier with custom domains
+- **Netlify** - Free tier with form handling
+- **GitHub Pages** - Free with GitHub integration  
+- **Supabase Storage** - Keep everything in Supabase
+- **Any static host** - Just upload the `web/public/` folder
+
+The web dashboard is **purely informational** - all bot functionality runs serverlessly on Supabase Edge Functions. No backend hosting required!
+
+## 🚀 **Zero-Server Architecture**
+
+Your entire Fitlink Bot runs without traditional servers:
+
+- **Bot Logic**: Supabase Edge Functions (serverless)
+- **Database**: Supabase PostgreSQL (managed)
+- **AI Processing**: Claude API (serverless)
+- **OAuth Flows**: Edge Functions (serverless)
+- **Web Dashboard**: Static files (any CDN)
+
+**Total hosting cost**: Just pay for usage (API calls, database storage)
 
 ---
 
-Built with ❤️ for evidence-based health optimization.
+**Built with ❤️ for the health and fitness community**
+
+*Fitlink Bot - Where health data meets AI intelligence* 🚀

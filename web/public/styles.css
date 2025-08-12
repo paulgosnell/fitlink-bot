@@ -1,0 +1,66 @@
+/* Mobile-First Marketing Styles */
+.gradient-bg { 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+}
+
+.telegram-gradient { 
+    background: linear-gradient(135deg, #0088cc 0%, #229ed9 100%); 
+}
+
+.pulse-animation { 
+    animation: pulse 2s infinite; 
+}
+
+.bounce-animation { 
+    animation: bounce 2s infinite; 
+}
+
+.chat-bubble { 
+    animation: float 3s ease-in-out infinite; 
+}
+
+@keyframes float { 
+    0%, 100% { transform: translateY(0px); } 
+    50% { transform: translateY(-10px); } 
+}
+
+@keyframes pulse { 
+    0%, 100% { transform: scale(1); } 
+    50% { transform: scale(1.05); } 
+}
+
+@keyframes bounce { 
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 
+    40% { transform: translateY(-10px); } 
+    60% { transform: translateY(-5px); } 
+}
+
+/* Mobile Optimizations */
+@media (max-width: 640px) { 
+    .hero-text { 
+        font-size: 2rem; 
+        line-height: 1.2; 
+    } 
+    .mobile-btn {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+    }
+}
+
+/* Button Hover Effects */
+.cta-button {
+    transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile Touch Improvements */
+.cta-button {
+    min-height: 44px; /* iOS touch target */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}

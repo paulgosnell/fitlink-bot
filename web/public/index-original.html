@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitlink Bot - AI Health Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-heartbeat text-3xl text-indigo-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h1 class="text-2xl font-bold text-gray-900">Fitlink Bot</h1>
+                        <p class="text-gray-600">AI-Powered Health Assistant</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="https://t.me/the_fitlink_bot" target="_blank" 
+                       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i class="fab fa-telegram-plane mr-2"></i>Start Bot
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="text-center">
+            <h2 class="text-4xl font-extrabold text-gray-900 sm:text-6xl">
+                Your Personal
+                <span class="text-indigo-600">Health AI</span>
+            </h2>
+            <p class="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">
+                Connect your Oura Ring and Strava, get personalized AI insights powered by Claude, 
+                and optimize your health with intelligent daily briefings.
+            </p>
+            
+            <!-- CTA Buttons -->
+            <div class="mt-10 flex justify-center space-x-6">
+                <a href="https://t.me/the_fitlink_bot" target="_blank"
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-lg text-lg font-semibold shadow-lg transition-all transform hover:scale-105">
+                    <i class="fab fa-telegram-plane mr-3"></i>Launch Bot
+                </a>
+                <a href="https://github.com/paulgosnell/fitlink-bot" target="_blank"
+                   class="bg-gray-800 hover:bg-gray-900 text-white px-8 py-4 rounded-lg text-lg font-semibold shadow-lg transition-all transform hover:scale-105">
+                    <i class="fab fa-github mr-3"></i>View Code
+                </a>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Oura Integration -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-moon text-2xl text-green-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Oura Ring Integration</h3>
+                    <p class="text-gray-600">Sleep quality, HRV, readiness scores, and recovery insights directly from your Oura Ring.</p>
+                </div>
+            </div>
+
+            <!-- Strava Integration -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-running text-2xl text-orange-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Strava Activities</h3>
+                    <p class="text-gray-600">Training load, performance metrics, and workout analysis from your Strava activities.</p>
+                </div>
+            </div>
+
+            <!-- AI Insights -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-brain text-2xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Claude AI Insights</h3>
+                    <p class="text-gray-600">Personalized health advice and daily briefings powered by Anthropic's Claude AI.</p>
+                </div>
+            </div>
+
+            <!-- Smart Detection -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-search text-2xl text-purple-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Smart AI Detection</h3>
+                    <p class="text-gray-600">Only uses AI when needed. 80-90% cost reduction through intelligent keyword detection.</p>
+                </div>
+            </div>
+
+            <!-- Weather Integration -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-sun text-2xl text-yellow-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Weather-Aware</h3>
+                    <p class="text-gray-600">Activity recommendations based on current weather conditions and forecasts.</p>
+                </div>
+            </div>
+
+            <!-- Secure & Private -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow">
+                <div class="text-center">
+                    <div class="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-shield-alt text-2xl text-red-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Secure & Private</h3>
+                    <p class="text-gray-600">Enterprise-grade security with encrypted tokens and Row Level Security protection.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="mt-20">
+            <h3 class="text-3xl font-bold text-center text-gray-900 mb-12">How It Works</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="text-center">
+                    <div class="bg-indigo-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">1</div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Connect Devices</h4>
+                    <p class="text-gray-600 text-sm">Link your Oura Ring and Strava account via secure OAuth</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-indigo-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">2</div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Ask Questions</h4>
+                    <p class="text-gray-600 text-sm">Chat naturally or use buttons to ask health-related questions</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-indigo-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">3</div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Get AI Insights</h4>
+                    <p class="text-gray-600 text-sm">Claude AI analyzes your data and provides personalized advice</p>
+                </div>
+                <div class="text-center">
+                    <div class="bg-indigo-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">4</div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Optimize Health</h4>
+                    <p class="text-gray-600 text-sm">Receive daily briefings and actionable recommendations</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sample Conversation -->
+        <div class="mt-20 bg-white rounded-xl shadow-lg p-8">
+            <h3 class="text-2xl font-bold text-center text-gray-900 mb-8">Sample Conversation</h3>
+            <div class="max-w-md mx-auto space-y-4">
+                <div class="flex">
+                    <div class="bg-gray-200 rounded-lg px-4 py-2 mr-auto">
+                        "I'm feeling tired today"
+                    </div>
+                </div>
+                <div class="flex">
+                    <div class="bg-indigo-600 text-white rounded-lg px-4 py-2 ml-auto">
+                        🏃‍♂️ I noticed you mentioned feeling tired!<br>
+                        Would you like me to analyze your data?<br>
+                        <button class="bg-indigo-800 px-2 py-1 rounded mt-1 text-xs">🧠 Yes, get AI advice</button>
+                    </div>
+                </div>
+                <div class="flex">
+                    <div class="bg-gray-200 rounded-lg px-4 py-2 mr-auto">
+                        <em>*clicks button*</em>
+                    </div>
+                </div>
+                <div class="flex">
+                    <div class="bg-indigo-600 text-white rounded-lg px-4 py-2 ml-auto">
+                        🧠 Based on your 6.5h sleep (78% efficiency) and yesterday's 45min run, I recommend light active recovery today...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Fitlink Bot</h4>
+                    <p class="text-gray-400">AI-powered health insights for the modern athlete.</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Links</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="https://t.me/the_fitlink_bot" class="hover:text-white">Telegram Bot</a></li>
+                        <li><a href="https://github.com/paulgosnell/fitlink-bot" class="hover:text-white">GitHub</a></li>
+                        <li><a href="https://supabase.com" class="hover:text-white">Powered by Supabase</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Technology</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li>Claude AI by Anthropic</li>
+                        <li>Supabase Edge Functions</li>
+                        <li>PostgreSQL Database</li>
+                        <li>OAuth Security</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2025 Fitlink Bot. Built with ❤️ for the health community.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

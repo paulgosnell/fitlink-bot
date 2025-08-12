@@ -11,6 +11,14 @@ export interface User {
   training_goal: string;
   is_active: boolean;
   paused_until?: string;
+  // Oura profile data
+  email?: string;
+  age?: number;
+  sex?: 'male' | 'female' | 'other';
+  height_cm?: number;
+  weight_kg?: number;
+  oura_user_id?: string;
+  profile_updated_at?: string;
   created_at: string;
   updated_at: string;
 }
