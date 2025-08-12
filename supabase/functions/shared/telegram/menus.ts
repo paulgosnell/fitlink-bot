@@ -105,13 +105,19 @@ ${stravaProvider?.is_active ? 'Connected - Activity & training data' : 'Not conn
   if (!ouraProvider?.is_active) {
     keyboard.inline_keyboard.push([{ text: "🔗 Connect Oura Ring", callback_data: "connect_oura" }]);
   } else {
-    keyboard.inline_keyboard.push([{ text: "🔌 Disconnect Oura", callback_data: "disconnect_oura" }]);
+    keyboard.inline_keyboard.push([
+      { text: "🔄 Sync Data", callback_data: "sync_oura" },
+      { text: "🔌 Disconnect", callback_data: "disconnect_oura" }
+    ]);
   }
 
   if (!stravaProvider?.is_active) {
     keyboard.inline_keyboard.push([{ text: "🔗 Connect Strava", callback_data: "connect_strava" }]);
   } else {
-    keyboard.inline_keyboard.push([{ text: "🔌 Disconnect Strava", callback_data: "disconnect_strava" }]);
+    keyboard.inline_keyboard.push([
+      { text: "🔄 Sync Data", callback_data: "sync_strava" },
+      { text: "🔌 Disconnect", callback_data: "disconnect_strava" }
+    ]);
   }
 
   keyboard.inline_keyboard.push([{ text: "🔙 Back", callback_data: "main_menu" }]);
