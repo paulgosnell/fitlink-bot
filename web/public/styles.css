@@ -1,6 +1,10 @@
-/* Mobile-First Marketing Styles */
+/* Premium Marketing Styles */
 .gradient-bg { 
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+}
+
+.premium-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
 }
 
 .telegram-gradient { 
@@ -17,6 +21,40 @@
 
 .chat-bubble { 
     animation: float 3s ease-in-out infinite; 
+}
+
+.glass-effect {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-card {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glow {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+}
+
+.feature-card {
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card {
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes float { 

@@ -24,10 +24,14 @@
 
 ### 📊 **Health Insights**
 - Daily AI-generated briefings with actionable advice
-- Sleep analysis with recovery recommendations
-- Training load assessment and workout planning
+- **Deep Health Analysis**: 30-day trend analysis with predictive insights
+- Sleep analysis with recovery recommendations and pattern recognition
+- Training load assessment and workout planning with adaptation cycles
 - Weather-aware exercise suggestions
 - Personalized health Q&A with context
+- **Predictive Health Alerts**: Early warning for illness and overtraining
+- **Peak Performance Windows**: AI-predicted optimal training days
+- **Micro-Habit Suggestions**: Specific, time-bound interventions
 - **User Profile Collection**: Age, sex, height, weight for personalized recommendations
 
 ### 🔐 **Enterprise Ready**
@@ -138,6 +142,7 @@ BASE_URL=https://your-project.supabase.co/functions/v1
 
 - `/start` - Welcome message and setup
 - `/brief` - Generate AI daily health summary
+- `/deepbrief` - Deep health analysis with 30-day trends
 - `/settings` - Manage connections and preferences
 - `/help` - Show available commands
 - `/pause [days]` - Pause daily briefings

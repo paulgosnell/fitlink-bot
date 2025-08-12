@@ -2,7 +2,7 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0
 import type { TelegramUpdate, TelegramMessage, User } from "../types.ts";
 import { sendTelegramMessage, sendTelegramMarkdownMessage } from "./api.ts";
 import { getUserByTelegramId, createUser, updateUser } from "../database/users.ts";
-import { generateBriefing } from "../ai/briefing.ts";
+import { generateBriefing, generateDeepBriefing } from "../ai/briefing.ts";
 import { showMainMenu, showSettingsMenu, showConnectionsMenu } from "./menus.ts";
 
 export async function handleTelegramUpdate(
@@ -85,6 +85,11 @@ async function handleCommand(
     
     case '/brief':
       await handleBriefCommand(user, chatId, supabase, botToken);
+      break;
+      
+    case '/deepbrief':
+    case '/deep':
+      await handleDeepBriefCommand(user, chatId, supabase, botToken);
       break;
     
     case '/settings':
@@ -179,6 +184,43 @@ async function handleBriefCommand(
   }
 }
 
+async function handleDeepBriefCommand(
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  try {
+    await sendTelegramMessage(botToken, chatId, "🧠 Analyzing your health patterns...\n\n_This may take a moment as I dive deep into 30 days of your data._");
+    
+    const deepBriefing = await generateDeepBriefing(user.id, supabase, 30);
+    
+    if (deepBriefing.error) {
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        `❌ ${deepBriefing.error}\n\nI need at least a few days of data to perform deep analysis. Try connecting your accounts in /settings and come back in a couple of days!`
+      );
+      return;
+    }
+
+    await sendTelegramMarkdownMessage(
+      botToken,
+      chatId,
+      deepBriefing.message!,
+      deepBriefing.keyboard
+    );
+    
+  } catch (error) {
+    console.error("Error generating deep briefing:", error);
+    await sendTelegramMessage(
+      botToken,
+      chatId,
+      "Sorry, there was an error analyzing your health patterns. Please try again later."
+    );
+  }
+}
+
 async function handleSettingsCommand(
   user: User,
   chatId: number,
@@ -199,6 +241,7 @@ async function handleHelpCommand(
 **Commands:**
 • /start - Get started and see main menu
 • /brief - Get your daily briefing now
+• /deepbrief - Deep health analysis (30-day trends)
 • /settings - Manage connections and preferences
 • /pause [days] - Pause daily briefings (default: 7 days)
 • /resume - Resume daily briefings

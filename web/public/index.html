@@ -3,145 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fitlink Bot - Your AI Health Coach on Telegram</title>
-    <meta name="description" content="Get instant health advice, workout plans, and nutrition tips through our AI-powered Telegram bot. Start your fitness journey today - completely free!">
+    <title>Fitlink Bot - AI Health Intelligence on Telegram</title>
+    <meta name="description" content="Deep health analysis with Oura Ring & Strava integration. Get predictive health alerts, peak performance windows, and personalized micro-habits through Claude AI.">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://fitlinkbot.netlify.app/">
-    <meta property="og:title" content="Fitlink Bot - Your AI Health Coach on Telegram">
-    <meta property="og:description" content="Get instant health advice, workout plans, and nutrition tips through our AI-powered Telegram bot. Start your fitness journey today!">
+    <meta property="og:title" content="Fitlink Bot - AI Health Intelligence on Telegram">
+    <meta property="og:description" content="Deep health analysis with 30-day trend prediction, early warning alerts, and micro-habit coaching powered by Claude AI.">
     <meta property="og:image" content="https://fitlinkbot.netlify.app/og-image.jpg">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://fitlinkbot.netlify.app/">
-    <meta property="twitter:title" content="Fitlink Bot - Your AI Health Coach on Telegram">
-    <meta property="twitter:description" content="Get instant health advice, workout plans, and nutrition tips through our AI-powered Telegram bot. Start your fitness journey today!">
+    <meta property="twitter:title" content="Fitlink Bot - AI Health Intelligence on Telegram">
+    <meta property="twitter:description" content="Deep health analysis with predictive insights and personalized coaching.">
     <meta property="twitter:image" content="https://fitlinkbot.netlify.app/og-image.jpg">
     
     <!-- Stylesheets -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        .premium-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .glow {
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 
 <body class="bg-gray-50">
-    <!-- Hero Section - Mobile First -->
-    <section class="gradient-bg min-h-screen flex items-center justify-center p-4">
-        <div class="container mx-auto text-center max-w-4xl">
-            <!-- Hero Icon -->
-            <div class="mb-6">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg bounce-animation">
-                    <i class="fab fa-telegram-plane text-4xl text-blue-500"></i>
+    <!-- Hero Section -->
+    <section class="premium-gradient min-h-screen flex items-center justify-center relative overflow-hidden">
+        <!-- Background Animation Elements -->
+        <div class="absolute inset-0 opacity-20">
+            <div class="absolute top-20 left-10 w-32 h-32 bg-white rounded-full animate-pulse"></div>
+            <div class="absolute bottom-20 right-10 w-24 h-24 bg-blue-300 rounded-full animate-bounce"></div>
+            <div class="absolute top-1/2 left-1/4 w-16 h-16 bg-purple-300 rounded-full animate-ping"></div>
+        </div>
+        
+        <div class="container mx-auto text-center max-w-6xl px-4 relative z-10">
+            <!-- Premium Hero Icon -->
+            <div class="mb-8">
+                <div class="inline-flex items-center justify-center w-24 h-24 glass-effect rounded-2xl glow">
+                    <i class="fab fa-telegram-plane text-5xl text-white"></i>
                 </div>
             </div>
 
             <!-- Hero Headline -->
-            <h1 class="hero-text text-4xl md:text-6xl font-bold text-white mb-4">
-                Your AI Health Coach
+            <h1 class="text-5xl md:text-7xl font-black text-white mb-6 leading-tight">
+                Your Body's<br>
+                <span class="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">
+                    Intelligence Hub
+                </span>
             </h1>
-            <h2 class="text-xl md:text-2xl text-blue-100 mb-6">
-                Get instant fitness advice on Telegram
+            <h2 class="text-xl md:text-3xl text-blue-100 mb-8 font-light">
+                Deep health analysis • Predictive insights • Micro-habit coaching
             </h2>
 
-            <!-- Value Proposition -->
-            <div class="max-w-md mx-auto mb-8">
-                <p class="text-lg text-blue-50 mb-6">
-                    🤖 Smart AI advice<br>
-                    💪 Personalized workouts<br>
-                    🥗 Nutrition guidance<br>
-                    📱 Available 24/7
-                </p>
+            <!-- Premium Value Props -->
+            <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+                <div class="glass-effect p-6 rounded-2xl">
+                    <div class="text-3xl mb-3">🧠</div>
+                    <h3 class="text-white font-bold text-lg mb-2">Deep Analysis</h3>
+                    <p class="text-blue-100 text-sm">30-day trend analysis with pattern recognition</p>
+                </div>
+                <div class="glass-effect p-6 rounded-2xl">
+                    <div class="text-3xl mb-3">🚨</div>
+                    <h3 class="text-white font-bold text-lg mb-2">Early Warnings</h3>
+                    <p class="text-blue-100 text-sm">Predict illness & overtraining before it hits</p>
+                </div>
+                <div class="glass-effect p-6 rounded-2xl">
+                    <div class="text-3xl mb-3">⚡</div>
+                    <h3 class="text-white font-bold text-lg mb-2">Peak Performance</h3>
+                    <p class="text-blue-100 text-sm">AI-predicted optimal training windows</p>
+                </div>
             </div>
 
-            <!-- Main CTA Button -->
+            <!-- CTA Buttons -->
             <div class="space-y-4">
-                <a href="https://t.me/my_fitlink_bot" 
-                   class="cta-button telegram-gradient inline-flex items-center px-8 py-4 text-xl font-bold text-white rounded-full shadow-lg pulse-animation">
-                    <i class="fab fa-telegram-plane mr-3 text-2xl"></i>
-                    Start Free on Telegram
-                </a>
+                <div class="space-y-4">
+                    <a href="https://t.me/my_fitlink_bot" 
+                       class="inline-flex items-center px-8 py-4 bg-white text-purple-600 text-xl font-bold rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300">
+                        <i class="fab fa-telegram-plane mr-3 text-2xl"></i>
+                        Start Free Analysis
+                    </a>
+                    
+                    <div class="block">
+                        <a href="dashboard.html" 
+                           class="text-blue-200 hover:text-white transition-colors underline">
+                            <i class="fas fa-chart-line mr-2"></i>
+                            Preview Dashboard
+                        </a>
+                    </div>
+                </div>
                 
-                <p class="text-sm text-blue-100">
-                    No signup required • Works on any phone
-                </p>
-            </div>
-
-            <!-- Social Proof -->
-            <div class="mt-8 flex justify-center items-center space-x-6 text-blue-100">
-                <div class="text-center">
-                    <div class="text-2xl font-bold">24/7</div>
-                    <div class="text-sm">Available</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold">AI</div>
-                    <div class="text-sm">Powered</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold">Free</div>
-                    <div class="text-sm">To Use</div>
+                <div class="flex justify-center space-x-8 text-blue-200 text-sm mt-6">
+                    <span><i class="fas fa-check mr-1"></i> No signup required</span>
+                    <span><i class="fas fa-shield-alt mr-1"></i> Privacy protected</span>
+                    <span><i class="fas fa-bolt mr-1"></i> Instant insights</span>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Sample Conversation -->
-    <section class="bg-gray-100 py-16 p-4">
-        <div class="container mx-auto">
-            <h2 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-12">
-                See It In Action
-            </h2>
+    <!-- Deep Analysis Demo -->
+    <section class="bg-white py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
+                    Beyond Basic Health Tracking
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    While other apps just show you data, Fitlink tells your body's story with deep pattern analysis and predictive intelligence.
+                </p>
+            </div>
             
-            <div class="max-w-2xl mx-auto">
+            <div class="max-w-4xl mx-auto">
                 <!-- Chat Interface -->
-                <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-3xl shadow-2xl overflow-hidden">
                     <!-- Chat Header -->
-                    <div class="telegram-gradient p-4 text-white">
+                    <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
                         <div class="flex items-center">
-                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center mr-3">
-                                <i class="fas fa-robot text-blue-500"></i>
+                            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mr-4">
+                                <i class="fas fa-brain text-purple-600 text-xl"></i>
                             </div>
                             <div>
-                                <h3 class="font-semibold">Fitlink Bot</h3>
-                                <p class="text-sm opacity-90">Online • AI Health Coach</p>
+                                <h3 class="font-bold text-lg">Fitlink Intelligence</h3>
+                                <p class="text-blue-100">Deep Health Analysis • Powered by Claude AI</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Chat Messages -->
-                    <div class="p-4 space-y-4">
-                        <!-- User Message -->
+                    <div class="p-6 space-y-6">
+                        <!-- User Command -->
                         <div class="flex justify-end">
-                            <div class="bg-blue-500 text-white px-4 py-2 rounded-lg max-w-xs">
-                                I'm feeling tired lately. Should I still workout?
+                            <div class="bg-blue-500 text-white px-6 py-3 rounded-2xl max-w-md shadow-lg">
+                                /deepbrief
                             </div>
                         </div>
 
                         <!-- Bot Response -->
                         <div class="flex justify-start">
-                            <div class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg max-w-xs chat-bubble">
-                                <p class="mb-2">🏃‍♂️ I understand you're feeling tired! Here's what I recommend:</p>
-                                <p class="mb-2">• Light cardio (15-20 min walk)</p>
-                                <p class="mb-2">• Focus on sleep quality tonight</p>
-                                <p>• Consider your stress levels</p>
+                            <div class="bg-white border-2 border-gray-100 text-gray-800 px-6 py-4 rounded-2xl max-w-2xl shadow-lg">
+                                <div class="mb-4">
+                                    <h4 class="font-bold text-purple-600 mb-2">🧠 Analyzing your health patterns...</h4>
+                                    <p class="italic text-gray-600">This may take a moment as I dive deep into 30 days of your data.</p>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- User Follow-up -->
-                        <div class="flex justify-end">
-                            <div class="bg-blue-500 text-white px-4 py-2 rounded-lg max-w-xs">
-                                Perfect! Any nutrition tips for energy?
-                            </div>
-                        </div>
-
-                        <!-- Bot Nutrition Response -->
+                        <!-- Deep Analysis Result -->
                         <div class="flex justify-start">
-                            <div class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg max-w-xs chat-bubble">
-                                <p class="mb-2">🥗 Absolutely! Try these energy boosters:</p>
-                                <p class="mb-2">• Complex carbs (oats, quinoa)</p>
-                                <p class="mb-2">• Protein + healthy fats</p>
-                                <p>• Stay hydrated! 💧</p>
+                            <div class="bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 text-gray-800 px-6 py-6 rounded-2xl max-w-2xl shadow-lg">
+                                <div class="mb-4">
+                                    <h4 class="font-bold text-lg mb-3">📖 Your Body's Story Today</h4>
+                                    <p class="text-gray-700 mb-4">Your body is telling a story of steady adaptation. Over the past 3 weeks, your HRV has climbed 12% while your resting heart rate dropped 3bpm - classic signs of positive training adaptation.</p>
+                                </div>
+                                
+                                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                                    <div class="bg-green-100 p-3 rounded-lg">
+                                        <h5 class="font-semibold text-green-800">🚀 Peak Window</h5>
+                                        <p class="text-sm text-green-700">Next 2-3 days (optimal conditions)</p>
+                                    </div>
+                                    <div class="bg-blue-100 p-3 rounded-lg">
+                                        <h5 class="font-semibold text-blue-800">💤 Sleep Pattern</h5>
+                                        <p class="text-sm text-blue-700">Consistent 7.5h avg, efficiency improving</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-purple-100 p-4 rounded-lg">
+                                    <h5 class="font-semibold text-purple-800 mb-2">💎 Micro-Wins Today:</h5>
+                                    <ul class="text-sm text-purple-700 space-y-1">
+                                        <li>• 10-min cold exposure at 6pm (optimize recovery)</li>
+                                        <li>• Protein within 30min post-workout</li>
+                                        <li>• Dim lights 2h before your 10:30pm bedtime</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -150,100 +204,211 @@
         </div>
     </section>
 
-    <!-- Features Quick Grid -->
-    <section class="bg-white py-16 p-4">
-        <div class="container mx-auto">
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
+    <!-- Advanced Features Grid -->
+    <section class="bg-gray-50 py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">
+                    Intelligence Beyond Basic Tracking
+                </h2>
+                <p class="text-xl text-gray-600">
+                    Advanced health analytics that adapt and learn from your unique patterns
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
                 <!-- Feature 1 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-brain text-2xl text-blue-500"></i>
+                <div class="feature-card bg-white p-8 rounded-2xl shadow-lg">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-chart-line text-2xl text-white"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Smart AI</h3>
-                    <p class="text-gray-600 text-sm">Powered by Claude AI for intelligent health insights</p>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Trend Prediction</h3>
+                    <p class="text-gray-600 mb-4">30-day pattern analysis identifies sleep, HRV, and training trends before they become problems.</p>
+                    <div class="text-sm text-purple-600 font-semibold">
+                        ✓ HRV trend analysis<br>
+                        ✓ Sleep pattern recognition<br>
+                        ✓ Training load optimization
+                    </div>
                 </div>
 
                 <!-- Feature 2 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-dumbbell text-2xl text-green-500"></i>
+                <div class="feature-card bg-white p-8 rounded-2xl shadow-lg">
+                    <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-exclamation-triangle text-2xl text-white"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Custom Workouts</h3>
-                    <p class="text-gray-600 text-sm">Personalized exercise plans based on your goals</p>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Early Warning System</h3>
+                    <p class="text-gray-600 mb-4">Multi-factor risk assessment predicts illness and overtraining 3-7 days in advance.</p>
+                    <div class="text-sm text-red-600 font-semibold">
+                        ✓ Illness risk prediction<br>
+                        ✓ Overtraining detection<br>
+                        ✓ Recovery recommendations
+                    </div>
                 </div>
 
                 <!-- Feature 3 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-apple-alt text-2xl text-orange-500"></i>
+                <div class="feature-card bg-white p-8 rounded-2xl shadow-lg">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-bolt text-2xl text-white"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Nutrition Guide</h3>
-                    <p class="text-gray-600 text-sm">Meal plans and healthy eating recommendations</p>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Peak Performance Windows</h3>
+                    <p class="text-gray-600 mb-4">AI identifies your optimal training days based on recovery markers and adaptation signals.</p>
+                    <div class="text-sm text-green-600 font-semibold">
+                        ✓ 2-7 day predictions<br>
+                        ✓ Adaptation cycle tracking<br>
+                        ✓ Performance optimization
+                    </div>
                 </div>
 
                 <!-- Feature 4 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-clock text-2xl text-purple-500"></i>
+                <div class="feature-card bg-white p-8 rounded-2xl shadow-lg">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-link text-2xl text-white"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">24/7 Support</h3>
-                    <p class="text-gray-600 text-sm">Always available when you need health advice</p>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Oura & Strava Integration</h3>
+                    <p class="text-gray-600 mb-4">Seamless connection to your favorite health devices for comprehensive data analysis.</p>
+                    <div class="text-sm text-blue-600 font-semibold">
+                        ✓ Sleep & readiness data<br>
+                        ✓ Training load analysis<br>
+                        ✓ Encrypted token storage
+                    </div>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card bg-white p-8 rounded-2xl shadow-lg">
+                    <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-seedling text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Micro-Habit Coaching</h3>
+                    <p class="text-gray-600 mb-4">Specific, time-bound interventions based on your current health patterns and goals.</p>
+                    <div class="text-sm text-pink-600 font-semibold">
+                        ✓ Personalized timing<br>
+                        ✓ Evidence-based habits<br>
+                        ✓ Progressive adaptation
+                    </div>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card bg-white p-8 rounded-2xl shadow-lg">
+                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6">
+                        <i class="fas fa-brain text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Claude AI Intelligence</h3>
+                    <p class="text-gray-600 mb-4">Powered by Claude's advanced reasoning for nuanced health insights and personalized advice.</p>
+                    <div class="text-sm text-yellow-600 font-semibold">
+                        ✓ Natural language analysis<br>
+                        ✓ Context-aware responses<br>
+                        ✓ Continuous learning
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Privacy & Security -->
+    <section class="bg-gradient-to-r from-gray-800 to-gray-900 py-16">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl font-bold text-white mb-8">Enterprise-Grade Security</h2>
+            <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                <div class="text-white">
+                    <i class="fas fa-lock text-3xl mb-4"></i>
+                    <h3 class="text-lg font-semibold mb-2">Encrypted Storage</h3>
+                    <p class="text-gray-300 text-sm">All OAuth tokens encrypted with AES-256</p>
+                </div>
+                <div class="text-white">
+                    <i class="fas fa-shield-alt text-3xl mb-4"></i>
+                    <h3 class="text-lg font-semibold mb-2">Row Level Security</h3>
+                    <p class="text-gray-300 text-sm">Your data stays private and secure</p>
+                </div>
+                <div class="text-white">
+                    <i class="fas fa-user-check text-3xl mb-4"></i>
+                    <h3 class="text-lg font-semibold mb-2">GDPR Compliant</h3>
+                    <p class="text-gray-300 text-sm">Full data control and deletion rights</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Final CTA Section -->
-    <section class="gradient-bg py-16 p-4">
-        <div class="container mx-auto text-center">
-            <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-                Ready to Transform Your Health?
+    <section class="premium-gradient py-20">
+        <div class="container mx-auto text-center px-4">
+            <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
+                Ready for Deep Health Intelligence?
             </h2>
-            <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-                Join thousands using Fitlink Bot for smarter, healthier living. Start your journey today - completely free!
+            <p class="text-xl text-blue-100 mb-10 max-w-3xl mx-auto">
+                Join the future of personalized health coaching. Get predictive insights, early warnings, and micro-habit coaching that adapts to your unique patterns.
             </p>
             
-            <div class="space-y-4">
-                <a href="https://t.me/my_fitlink_bot" 
-                   class="cta-button telegram-gradient inline-flex items-center px-8 py-4 text-xl font-bold text-white rounded-full shadow-lg pulse-animation">
-                    <i class="fab fa-telegram-plane mr-3 text-2xl"></i>
-                    Get Started Now - Free
-                </a>
+            <div class="space-y-6">
+                <div class="space-y-4">
+                    <a href="https://t.me/my_fitlink_bot" 
+                       class="inline-flex items-center px-10 py-5 bg-white text-purple-600 text-xl font-black rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 glow">
+                        <i class="fab fa-telegram-plane mr-3 text-3xl"></i>
+                        Start Your Deep Analysis
+                    </a>
+                    
+                    <div class="block">
+                        <a href="dashboard.html" 
+                           class="text-blue-200 hover:text-white transition-colors text-lg">
+                            <i class="fas fa-chart-line mr-2"></i>
+                            See Analytics Preview →
+                        </a>
+                    </div>
+                </div>
                 
-                <p class="text-sm text-blue-100">
-                    Works on any phone • No app download needed
-                </p>
+                <div class="flex justify-center space-x-8 text-blue-200">
+                    <span class="flex items-center"><i class="fas fa-check mr-2"></i> Free forever</span>
+                    <span class="flex items-center"><i class="fas fa-zap mr-2"></i> Instant setup</span>
+                    <span class="flex items-center"><i class="fas fa-mobile-alt mr-2"></i> Works everywhere</span>
+                </div>
             </div>
 
-            <!-- Trust Signals -->
-            <div class="mt-12 flex justify-center items-center space-x-8 text-blue-200">
-                <div class="flex items-center">
-                    <i class="fas fa-shield-alt mr-2"></i>
-                    <span class="text-sm">Privacy Protected</span>
-                </div>
-                <div class="flex items-center">
-                    <i class="fas fa-bolt mr-2"></i>
-                    <span class="text-sm">Instant Responses</span>
-                </div>
-                <div class="flex items-center">
-                    <i class="fas fa-heart mr-2"></i>
-                    <span class="text-sm">Made with Care</span>
-                </div>
+            <div class="mt-16 text-blue-200 text-sm">
+                <p>Trusted by health enthusiasts worldwide • Privacy-first design • Made with ❤️</p>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-8 p-4">
-        <div class="container mx-auto text-center">
-            <div class="mb-4">
-                <h3 class="text-2xl font-bold mb-2">Fitlink Bot</h3>
-                <p class="text-gray-400">Your AI Health Coach on Telegram</p>
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">Fitlink</h3>
+                    <p class="text-gray-400">AI Health Intelligence Platform</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-3">Features</h4>
+                    <ul class="text-gray-400 space-y-1">
+                        <li><a href="dashboard.html" class="hover:text-white transition-colors">Dashboard</a></li>
+                        <li>Deep Analysis</li>
+                        <li>Early Warnings</li>
+                        <li>Peak Performance</li>
+                        <li>Micro-Habits</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-3">Integrations</h4>
+                    <ul class="text-gray-400 space-y-1">
+                        <li>Oura Ring</li>
+                        <li>Strava</li>
+                        <li>Claude AI</li>
+                        <li>Telegram</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-3">Security</h4>
+                    <ul class="text-gray-400 space-y-1">
+                        <li>Encrypted Storage</li>
+                        <li>GDPR Compliant</li>
+                        <li>Privacy Protected</li>
+                        <li>Secure OAuth</li>
+                    </ul>
+                </div>
             </div>
             
-            <div class="border-t border-gray-700 pt-4">
-                <p class="text-gray-400 text-sm">
-                    &copy; 2025 Fitlink Bot. Made with ❤️ for healthier living.
+            <div class="border-t border-gray-700 pt-8 text-center">
+                <p class="text-gray-400">
+                    &copy; 2025 Fitlink Bot. Advanced health intelligence for the modern athlete.
                 </p>
             </div>
         </div>
