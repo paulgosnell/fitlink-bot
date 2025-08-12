@@ -15,10 +15,38 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     
-    // Health check
-    if (url.pathname.endsWith('/health')) {
+    // Health checks
+    if (url.pathname.endsWith('/health') || url.pathname.endsWith('/healthz')) {
       return new Response(JSON.stringify({ status: "ok" }), { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
+    // Self-serve webhook setup (uses function secrets)
+    if (req.method === 'POST' && url.pathname.endsWith('/set-webhook')) {
+      const baseUrl = Deno.env.get('BASE_URL');
+      const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+      const webhookSecret = Deno.env.get('TELEGRAM_WEBHOOK_SECRET') || 'webhook-secret';
+
+      if (!baseUrl || !botToken) {
+        return new Response(JSON.stringify({ error: 'Missing BASE_URL or TELEGRAM_BOT_TOKEN' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const webhookUrl = `${baseUrl}/telegram/webhook/${webhookSecret}`;
+      const tgUrl = `https://api.telegram.org/bot${botToken}/setWebhook`;
+      const tgResp = await fetch(tgUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: webhookUrl })
+      });
+      const tgJson = await tgResp.json().catch(() => ({}));
+
+      return new Response(JSON.stringify({ ok: tgResp.ok, status: tgResp.status, result: tgJson, webhookUrl }), {
+        status: tgResp.ok ? 200 : 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
