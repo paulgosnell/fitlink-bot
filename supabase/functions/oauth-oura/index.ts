@@ -133,15 +133,22 @@ serve(async (req) => {
         }
 
         return new Response(
-          `<html><body>
+          `<!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Oura Ring Connected</title>
+          </head>
+          <body>
             <h1>✓ Oura Ring Connected!</h1>
             <p>Your Oura Ring has been successfully connected to Fitlink Bot.</p>
             <p>You can now close this window and return to Telegram.</p>
             <script>
               setTimeout(() => window.close(), 3000);
             </script>
-          </body></html>`,
-          { headers: { ...corsHeaders, 'Content-Type': 'text/html' } }
+          </body>
+          </html>`,
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
         );
 
       } catch (error) {
