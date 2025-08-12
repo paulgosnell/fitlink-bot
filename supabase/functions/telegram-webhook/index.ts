@@ -1,125 +1,207 @@
-/// <reference types="https://deno.land/types/deno.d.ts" />
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { handleTelegramUpdate } from "../shared/telegram/handler.ts";
 
 serve(async (req) => {
-  // CORS headers for all responses
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   };
 
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const url = new URL(req.url);
-    console.log("Received request:", req.method, url.pathname);
     
-    // Health check endpoint (no auth required)
+    // Health check
     if (url.pathname.endsWith('/health')) {
-      return new Response(
-        JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ status: "ok" }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
 
-    // Webhook endpoint - extract secret from path
+    // Verify webhook secret from path
     const pathParts = url.pathname.split('/');
     const secret = pathParts[pathParts.length - 1];
     const expectedSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
     
-    console.log("Webhook secret check:", { received: secret, expected: expectedSecret ? "SET" : "NOT_SET" });
-    
-    // Verify webhook secret
     if (!expectedSecret || secret !== expectedSecret) {
-      console.error("Invalid webhook secret:", { received: secret, expected: expectedSecret });
-      return new Response(
-        JSON.stringify({ error: "Unauthorized - Invalid webhook secret" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+        status: 401, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
 
-    // Handle webhook POST requests
     if (req.method === 'POST') {
-      console.log("Processing webhook POST request");
-      
-      // Parse Telegram update
-      let update;
-      try {
-        update = await req.json();
-        console.log("Received Telegram update:", JSON.stringify(update, null, 2));
-      } catch (error) {
-        console.error("Failed to parse JSON:", error);
-        return new Response(
-          JSON.stringify({ error: "Invalid JSON" }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      const update = await req.json();
+      console.log("Received update:", JSON.stringify(update, null, 2));
       
       // Get environment variables
-      const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       
-      if (!telegramToken) {
-        console.error("TELEGRAM_BOT_TOKEN not configured");
-        return new Response(
-          JSON.stringify({ error: "Bot token not configured" }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      if (!supabaseUrl || !supabaseKey) {
-        console.error("Supabase configuration missing");
-        return new Response(
-          JSON.stringify({ error: "Database not configured" }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (!botToken || !supabaseUrl || !supabaseKey) {
+        console.error("Missing environment variables");
+        return new Response(JSON.stringify({ ok: true }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
       }
 
-      // Initialize Supabase client with service role key
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      try {
-        // Process the Telegram update
-        await handleTelegramUpdate(update, supabase, telegramToken);
-        
-        console.log("Successfully processed Telegram update");
-        return new Response(
-          JSON.stringify({ ok: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } catch (handlerError) {
-        console.error("Error in handleTelegramUpdate:", handlerError);
-        
-        // Still return OK to Telegram to prevent retries
-        return new Response(
-          JSON.stringify({ ok: true, error: "Internal processing error" }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      // Handle basic commands
+      if (update.message?.text) {
+        const chatId = update.message.chat.id;
+        const text = update.message.text.trim();
+        const telegramUser = update.message.from;
+
+        if (text === '/start') {
+          // Send welcome message with main menu
+          const welcomeMessage = `🚀 *Welcome to Fitlink Bot!*
+
+Your AI-powered health intelligence hub is ready.
+
+Connect your health data and get:
+• 🧠 Deep health analysis
+• 🚨 Early warning alerts  
+• ⚡ Peak performance predictions
+• 💎 Micro-habit coaching
+
+What would you like to do?`;
+
+          const keyboard = {
+            inline_keyboard: [
+              [
+                { text: "🔗 Connect Oura Ring", callback_data: "connect_oura" },
+                { text: "🚴 Connect Strava", callback_data: "connect_strava" }
+              ],
+              [
+                { text: "📊 Health Brief", callback_data: "brief" },
+                { text: "🧠 Deep Analysis", callback_data: "deep_brief" }
+              ],
+              [
+                { text: "⚙️ Settings", callback_data: "settings" },
+                { text: "❓ Help", callback_data: "help" }
+              ]
+            ]
+          };
+
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: welcomeMessage,
+              parse_mode: 'Markdown',
+              reply_markup: keyboard
+            })
+          });
+
+          // Create user record if doesn't exist
+          if (telegramUser) {
+            const { error } = await supabase
+              .from('users')
+              .upsert({
+                id: telegramUser.id,
+                username: telegramUser.username || null,
+                first_name: telegramUser.first_name || null,
+                last_name: telegramUser.last_name || null,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'id'
+              });
+
+            if (error) {
+              console.error("Error creating user:", error);
+            }
+          }
+        }
       }
+
+      // Handle callback queries (button presses)
+      if (update.callback_query) {
+        const callbackQuery = update.callback_query;
+        const chatId = callbackQuery.message?.chat.id;
+        const data = callbackQuery.data;
+
+        if (chatId && data) {
+          let responseText = "Feature coming soon! 🚀";
+
+          if (data === 'connect_oura') {
+            const userId = callbackQuery.from.id;
+            const connectUrl = `${supabaseUrl}/functions/v1/oauth-oura/start?user_id=${userId}`;
+            responseText = `🔗 *Connect your Oura Ring*
+
+Click the link below to securely connect your Oura Ring to Fitlink Bot:
+
+[Connect Oura Ring](${connectUrl})
+
+This will allow me to analyze your sleep, readiness, and activity data for personalized health insights.`;
+          } else if (data === 'connect_strava') {
+            responseText = "🚴 *Strava integration coming soon!*\n\nWe're working on connecting your training data for even better performance insights.";
+          } else if (data === 'brief') {
+            responseText = "📊 *Health Brief*\n\nConnect your Oura Ring first to get personalized health insights!";
+          } else if (data === 'deep_brief') {
+            responseText = "🧠 *Deep Analysis*\n\nThis feature analyzes 30 days of your health data for advanced insights. Connect your Oura Ring to get started!";
+          } else if (data === 'settings') {
+            responseText = "⚙️ *Settings*\n\nSettings panel coming soon. You'll be able to customize your notifications and preferences here.";
+          } else if (data === 'help') {
+            responseText = `❓ *Help & Support*
+
+*Commands:*
+• /start - Show main menu
+• /brief - Get health summary
+• /settings - Access settings
+
+*Features:*
+• Connect Oura Ring for sleep & readiness data
+• Deep AI analysis of your health patterns
+• Early warning system for health issues
+• Personalized micro-habit recommendations
+
+*Support:* Contact @support for help`;
+          }
+
+          // Send response
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: responseText,
+              parse_mode: 'Markdown'
+            })
+          });
+
+          // Answer callback query
+          await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              callback_query_id: callbackQuery.id
+            })
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true }), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
 
-    // Method not allowed
-    console.log("Method not allowed:", req.method);
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { 
+      status: 405, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
 
   } catch (error) {
-    console.error("Top-level error:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: "Internal server error",
-        message: error.message,
-        timestamp: new Date().toISOString()
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("Error:", error);
+    return new Response(JSON.stringify({ ok: true }), { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
   }
 });
