@@ -13,7 +13,7 @@
 ### **2. Marketing Website**
 - **URL**: https://fitlinkbot.netlify.app/
 - **Features**: Mobile-optimized landing page with conversion focus
-- **CTA**: Drives users to Telegram bot `@my_fitlink_bot`
+- **CTA**: Drives users to Telegram bot `@the_fitlink_bot`
 - **Auto-deploy**: GitHub → Netlify pipeline active
 
 ### **3. Database & Backend**
@@ -34,7 +34,7 @@
 - **OAuth**: Oura Ring & Strava integration ready
 
 ### **6. Bot Branding**
-- **Username**: `@my_fitlink_bot` (perfect marketing psychology)
+- **Username**: `@the_fitlink_bot` (perfect marketing psychology)
 - **Name**: Fitlink Bot
 - **Token**: `8236325093:AAEswgzArS5Fk9DuqOG3c-HLo126OvVlyPI`
 
@@ -64,7 +64,7 @@
    - Option C: Implement long polling instead of webhooks
 
 2. **Test bot functionality**
-   - Send `/start` to `@my_fitlink_bot`
+   - Send `/start` to `@the_fitlink_bot`
    - Verify menu system works
    - Test AI conversation flow
 
@@ -110,7 +110,7 @@
 
 ### **Live Deployments**
 - **Website**: https://fitlinkbot.netlify.app/
-- **Bot**: @my_fitlink_bot (not responding yet)
+- **Bot**: @the_fitlink_bot (not responding yet)
 - **Supabase**: https://supabase.com/dashboard/project/umixefoxgjmdlvvtfnmr
 - **GitHub**: https://github.com/paulgosnell/fitlink-bot
 
@@ -158,7 +158,7 @@ The fastest path to get the bot working:
 
 - ✅ **Beautiful marketing site** driving users to bot
 - ✅ **Complete AI system** with cost optimization  
-- ✅ **Perfect branding** with `@my_fitlink_bot`
+- ✅ **Perfect branding** with `@the_fitlink_bot`
 - ✅ **Full database schema** and OAuth ready
 - ✅ **Production-ready codebase** with documentation
 - ✅ **Auto-deploy pipeline** GitHub → Netlify

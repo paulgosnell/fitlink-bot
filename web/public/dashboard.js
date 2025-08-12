@@ -905,7 +905,7 @@ class FitlinkDashboard {
                         <h2 class="text-3xl font-bold text-gray-800 mb-4">Access Your Health Dashboard</h2>
                         <p class="text-gray-600 mb-8">To view your personalized health analytics, you need to connect through the Fitlink Bot on Telegram.</p>
                         <div class="space-y-4">
-                            <a href="https://t.me/my_fitlink_bot?start=dashboard" 
+                            <a href="https://t.me/the_fitlink_bot?start=dashboard" 
                                class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
                                 <i class="fab fa-telegram-plane mr-3 text-xl"></i>
                                 Connect via Telegram Bot
@@ -934,7 +934,7 @@ class FitlinkDashboard {
                         <h2 class="text-3xl font-bold text-gray-800 mb-4">Building Your Health Profile</h2>
                         <p class="text-gray-600 mb-8">Connect your Oura Ring and Strava accounts to start seeing personalized health analytics and deep insights.</p>
                         <div class="space-y-4">
-                            <a href="https://t.me/my_fitlink_bot" 
+                            <a href="https://t.me/the_fitlink_bot" 
                                class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-green-600 text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
                                 <i class="fab fa-telegram-plane mr-3 text-xl"></i>
                                 Connect Your Devices
