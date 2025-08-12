@@ -393,7 +393,7 @@ async function handleConnectOura(chatId: number, userId: number, botToken: strin
   const ouraClientId = Deno.env.get("OURA_CLIENT_ID");
   const baseUrl = Deno.env.get("BASE_URL");
   
-  const authUrl = `https://cloud.ouraring.com/oauth/authorize?response_type=code&client_id=${ouraClientId}&redirect_uri=${baseUrl}/oauth-oura&scope=email%20personal%20daily&state=${userId}`;
+  const authUrl = `${baseUrl}/oauth-oura/start?user_id=${userId}`;
   
   const message = `🟢 *Connect Your Oura Ring*
 
