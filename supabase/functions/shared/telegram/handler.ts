@@ -423,7 +423,7 @@ async function handleOAuthStart(
   chatId: number
 ): Promise<void> {
   const baseUrl = Deno.env.get('BASE_URL');
-  const oauthUrl = `${baseUrl}/oauth/${provider}/start?user_id=${user.id}`;
+  const oauthUrl = `${baseUrl}/oauth-${provider}/start?user_id=${user.id}`;
   
   const providerName = provider === 'oura' ? 'Oura Ring' : 'Strava';
   
