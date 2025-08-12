@@ -17,25 +17,62 @@ jobs:
       with:
         version: latest
     
+    - name: Check Secrets
+      run: |
+        if [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ]; then
+          echo "❌ SUPABASE_ACCESS_TOKEN secret is missing"
+          exit 1
+        fi
+        if [ -z "${{ secrets.SUPABASE_PROJECT_REF }}" ]; then
+          echo "❌ SUPABASE_PROJECT_REF secret is missing"
+          echo "Please add this secret to your GitHub repository"
+          echo "You can find it in your Supabase dashboard under Settings > General"
+          exit 1
+        fi
+        echo "✅ All required secrets are present"
+    
     - name: Deploy Edge Functions
       env:
         SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       run: |
+        echo "🚀 Deploying to Supabase project: $PROJECT_REF"
+        
         # Deploy all functions
+        echo "📦 Deploying telegram function..."
         supabase functions deploy telegram --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying telegram-webhook function..."
         supabase functions deploy telegram-webhook --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying telegram-poll function..."
         supabase functions deploy telegram-poll --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying oauth-oura function..."
         supabase functions deploy oauth-oura --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying oauth-strava function..."
         supabase functions deploy oauth-strava --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying data-sync-oura function..."
         supabase functions deploy data-sync-oura --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying daily-briefings function..."
         supabase functions deploy daily-briefings --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying oauth-test function..."
         supabase functions deploy oauth-test --project-ref $PROJECT_REF
+        
+        echo "📦 Deploying test-db function..."
         supabase functions deploy test-db --project-ref $PROJECT_REF
+        
+        echo "✅ All functions deployed successfully!"
         
     - name: Update Database Schema
       env:
         SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       run: |
+        echo "🗄️ Updating database schema..."
         supabase db push --project-ref $PROJECT_REF
+        echo "✅ Database schema updated successfully!"
