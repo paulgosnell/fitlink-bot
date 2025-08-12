@@ -91,6 +91,10 @@ async function handleCommand(
     case '/deep':
       await handleDeepBriefCommand(user, chatId, supabase, botToken);
       break;
+      
+    case '/dashboard':
+      await handleDashboardCommand(user, chatId, supabase, botToken);
+      break;
     
     case '/settings':
       await handleSettingsCommand(user, chatId, supabase, botToken);
@@ -221,6 +225,71 @@ async function handleDeepBriefCommand(
   }
 }
 
+async function handleDashboardCommand(
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  try {
+    // Generate a secure dashboard token
+    const dashboardToken = await generateDashboardToken(user.id, supabase);
+    
+    // Create dashboard URL with user authentication
+    const baseUrl = 'https://fitlinkbot.netlify.app';
+    const dashboardUrl = `${baseUrl}/dashboard.html?user_id=${user.id}&token=${dashboardToken}`;
+    
+    const message = `📊 **Your Health Intelligence Dashboard**
+
+Access your personalized analytics dashboard with:
+• 30-day trend analysis
+• Predictive health alerts  
+• Peak performance windows
+• Micro-habit recommendations
+• Real-time health metrics
+
+🔒 **Secure Access**: This link is unique to you and expires in 24 hours.
+
+[🚀 Open Dashboard](${dashboardUrl})
+
+_Your health data is encrypted and secure._`;
+
+    await sendTelegramMarkdownMessage(botToken, chatId, message);
+    
+  } catch (error) {
+    console.error("Error generating dashboard access:", error);
+    await sendTelegramMessage(
+      botToken,
+      chatId,
+      "Sorry, there was an error generating your dashboard access. Please try again later."
+    );
+  }
+}
+
+async function generateDashboardToken(userId: string, supabase: SupabaseClient): Promise<string> {
+  // Generate a secure token for dashboard access
+  const token = crypto.randomUUID();
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + 24); // 24-hour expiry
+  
+  // Store the token in database for validation
+  const { error } = await supabase
+    .from('dashboard_tokens')
+    .insert([{
+      user_id: userId,
+      token: token,
+      expires_at: expiresAt.toISOString(),
+      created_at: new Date().toISOString()
+    }]);
+    
+  if (error) {
+    console.error("Error storing dashboard token:", error);
+    throw new Error("Failed to generate dashboard access");
+  }
+  
+  return token;
+}
+
 async function handleSettingsCommand(
   user: User,
   chatId: number,
@@ -242,6 +311,7 @@ async function handleHelpCommand(
 • /start - Get started and see main menu
 • /brief - Get your daily briefing now
 • /deepbrief - Deep health analysis (30-day trends)
+• /dashboard - Access your web analytics dashboard
 • /settings - Manage connections and preferences
 • /pause [days] - Pause daily briefings (default: 7 days)
 • /resume - Resume daily briefings
