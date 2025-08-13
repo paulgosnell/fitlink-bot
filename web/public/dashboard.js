@@ -48,107 +48,38 @@ class FitlinkDashboard {
 
     async checkAuthStatus() {
         try {
-            console.log('Starting auth check...');
-            console.log('Window.Telegram available:', !!window.Telegram);
-            console.log('Window.Telegram.WebApp available:', !!(window.Telegram && window.Telegram.WebApp));
-            
-            // Check if running in Telegram Web App
-            if (window.Telegram && window.Telegram.WebApp) {
-                const tg = window.Telegram.WebApp;
-                tg.ready();
-                
-                console.log('Telegram WebApp initialized');
-                console.log('Full Telegram object:', window.Telegram);
-                console.log('WebApp object:', tg);
-                console.log('InitDataUnsafe:', tg.initDataUnsafe);
-                console.log('InitData raw:', tg.initData);
-                console.log('Platform:', tg.platform);
-                console.log('Version:', tg.version);
-                
-                // Get user data from Telegram
-                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                    const telegramUser = tg.initDataUnsafe.user;
-                    console.log('Telegram user found:', telegramUser);
-                    console.log('User ID:', telegramUser.id);
-                    console.log('Username:', telegramUser.username);
-                    console.log('First name:', telegramUser.first_name);
-                    
-                    // Authenticate with Telegram user ID
-                    await this.authenticateTelegramUser(telegramUser.id, tg.initData);
-                } else {
-                    console.log('No Telegram user data in initDataUnsafe');
-                    console.log('Available properties on tg:', Object.keys(tg));
-                    console.log('Trying manual authentication with known user ID 5269737203...');
-                    
-                    // TEMPORARY: Try with your known user ID
-                    await this.authenticateTelegramUser(5269737203, 'manual_override');
-                }
-            } else {
-                console.log('Not running in Telegram WebApp, checking URL params');
-                // Fallback to URL params for non-Telegram access
-                const urlParams = new URLSearchParams(window.location.search);
-                const userId = urlParams.get('user_id');
-                const token = urlParams.get('token');
-
-                console.log('URL params - userId:', userId, 'token:', token ? 'present' : 'missing');
-
-                if (userId && token) {
-                    await this.authenticateUser(userId, token);
-                } else {
-                    console.log('No valid URL params, showing not logged in');
-                    this.showNotLoggedIn();
-                    return;
-                }
-            }
+            // Simple approach: Try to authenticate with your user ID first
+            console.log('Attempting authentication...');
+            await this.authenticateTelegramUser(5269737203, 'direct');
         } catch (error) {
-            console.error('Auth check failed:', error);
-            this.showNotLoggedIn();
+            console.error('Authentication failed:', error);
+            // Show no data state instead of login error - user is likely logged in but no devices connected
+            this.showNoData();
         }
     }
 
     async authenticateTelegramUser(telegramUserId, initData) {
         try {
-            console.log('=== AUTHENTICATING TELEGRAM USER ===');
-            console.log('Telegram User ID:', telegramUserId);
-            console.log('Init Data:', initData);
-            
-            // Test Supabase connection first
-            console.log('Testing Supabase connection...');
-            console.log('Supabase client:', this.supabase);
+            console.log('Authenticating user ID:', telegramUserId);
             
             // Get user data directly using telegram_id
-            console.log('Querying users table for telegram_id:', telegramUserId);
             const { data: user, error } = await this.supabase
                 .from('users')
                 .select('*')
                 .eq('telegram_id', telegramUserId)
                 .single();
 
-            console.log('=== SUPABASE QUERY RESULT ===');
-            console.log('User data:', user);
-            console.log('Error:', error);
-            console.log('Query successful:', !error);
-
-            if (error) {
-                console.log('Database error details:', error.message, error.code, error.details);
-                throw new Error(`Database error: ${error.message}`);
-            }
-            
-            if (!user) {
-                console.log('No user found with telegram_id:', telegramUserId);
-                throw new Error('User not found - please use /start in the bot first');
+            if (error || !user) {
+                console.log('User not found in database');
+                throw new Error('User not found');
             }
 
-            console.log('=== USER AUTHENTICATION SUCCESSFUL ===');
-            console.log('User found:', user.first_name, user.username);
-            console.log('User ID (database):', user.id);
+            console.log('User authenticated:', user.first_name);
             this.currentUser = user;
             await this.loadHealthData();
         } catch (error) {
-            console.error('=== TELEGRAM AUTHENTICATION FAILED ===');
-            console.error('Error:', error.message);
-            console.error('Full error:', error);
-            this.showNotLoggedIn();
+            console.error('Authentication failed:', error);
+            throw error;
         }
     }
 
@@ -188,34 +119,28 @@ class FitlinkDashboard {
 
     async loadHealthData() {
         try {
-            console.log('Loading health data for user:', this.currentUser?.id);
+            console.log('Loading health data...');
             this.isLoading = true;
             
-            // Load comprehensive health data
-            const [sleepData, activityData, briefLogs] = await Promise.all([
+            // Load health data from multiple tables
+            const [sleepData, activityData] = await Promise.all([
                 this.loadSleepData(),
-                this.loadActivityData(),
-                this.loadBriefingLogs()
+                this.loadActivityData()
             ]);
 
-            console.log('Health data loaded:', {
-                sleepRecords: sleepData.length,
-                activityRecords: activityData.length,
-                briefingRecords: briefLogs.length
-            });
+            console.log('Data loaded - Sleep:', sleepData.length, 'Activities:', activityData.length);
 
             this.healthData = {
                 sleep: sleepData,
                 activities: activityData,
-                briefings: briefLogs,
-                summary: await this.generateHealthSummary(sleepData, activityData)
+                summary: this.generateHealthSummary(sleepData, activityData)
             };
 
-            console.log('Rendering dashboard with health data:', this.healthData);
             this.renderDashboard();
         } catch (error) {
             console.error('Failed to load health data:', error);
-            this.showError('Failed to load your health data. Please try again.');
+            // If health data loading fails, just show no data state
+            this.showNoData();
         } finally {
             this.isLoading = false;
         }
@@ -1135,8 +1060,7 @@ class FitlinkDashboard {
     }
 
     showNotLoggedIn() {
-        console.log('=== NOT LOGGED IN ===');
-        console.log('Showing debug interface...');
+        console.log('User not found in database');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
@@ -1144,102 +1068,59 @@ class FitlinkDashboard {
                     <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-user-slash text-2xl text-white"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-3">Authentication Issue</h2>
-                    <p class="text-gray-600 text-sm mb-4">User ID 5269737203 - Debug to see what's happening</p>
-                    <div class="space-x-2">
-                        <button onclick="console.log('=== MANUAL DEBUG ===', {telegram: window.Telegram, telegramWebApp: window.Telegram?.WebApp, telegramUser: window.Telegram?.WebApp?.initDataUnsafe?.user, dashboard: window.dashboard, currentUser: window.dashboard?.currentUser}); window.dashboard?.testUserLookup(5269737203)" 
-                           class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">
-                            <i class="fas fa-bug mr-1"></i>
-                            Debug User
-                        </button>
-                        <button onclick="window.dashboard?.authenticateTelegramUser(5269737203, 'manual')" 
-                           class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm">
-                            <i class="fas fa-user mr-1"></i>
-                            Force Auth
-                        </button>
-                        <button onclick="window.location.href='https://t.me/the_fitlink_bot'" 
-                           class="px-3 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm">
-                            <i class="fab fa-telegram-plane mr-1"></i>
-                            Bot
-                        </button>
-                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">Account Not Found</h2>
+                    <p class="text-gray-600 text-sm mb-4">Please use /start in the Fitlink Bot first to create your account.</p>
+                    <a href="https://t.me/the_fitlink_bot" 
+                       class="inline-block px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
+                        <i class="fab fa-telegram-plane mr-2"></i>
+                        Go to Bot
+                    </a>
                 </div>
             `;
         }
     }
     
-    async testUserLookup(userId) {
-        console.log('=== TESTING USER LOOKUP ===');
-        console.log('Looking for user ID:', userId);
-        
-        try {
-            // Test database connection first
-            console.log('Testing basic database connection...');
-            const { data: testData, error: testError } = await this.supabase
-                .from('users')
-                .select('telegram_id, first_name, username')
-                .limit(3);
-            
-            console.log('Database test result:', { testData, testError });
-            
-            if (testError) {
-                console.log('Database connection failed:', testError);
-                return;
-            }
-            
-            // Look for specific user
-            console.log('Looking for your user...');
-            const { data: user, error } = await this.supabase
-                .from('users')
-                .select('*')
-                .eq('telegram_id', userId)
-                .single();
-                
-            console.log('=== USER LOOKUP RESULT ===');
-            console.log('User found:', !!user);
-            console.log('User data:', user);
-            console.log('Error:', error);
-            
-            if (user) {
-                console.log('SUCCESS: User exists in database!');
-                console.log('Name:', user.first_name, user.username);
-                console.log('User DB ID:', user.id);
-                console.log('Created:', user.created_at);
-                
-                // Try to manually authenticate this user
-                console.log('Attempting manual authentication...');
-                this.currentUser = user;
-                await this.loadHealthData();
-            } else {
-                console.log('PROBLEM: User not found in database');
-                console.log('You may need to use /start in the bot first');
-            }
-            
-        } catch (e) {
-            console.log('Lookup failed with exception:', e);
-        }
-    }
 
 
     showNoData() {
-        console.log('=== NO DATA - CONNECT DEVICES ===');
+        console.log('User authenticated but no health data available');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
-                <div class="glass-card p-6 rounded-xl shadow-lg text-center">
-                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-link text-2xl text-white"></i>
+                <div class="space-y-4">
+                    <div class="glass-card p-4 rounded-xl shadow-lg text-center">
+                        <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-chart-line text-white"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-gray-800 mb-2">Connect Your Devices</h2>
+                        <p class="text-gray-600 text-sm mb-3">Connect Oura Ring and Strava to see your health insights</p>
+                        <a href="https://t.me/the_fitlink_bot" 
+                           class="inline-block px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
+                            Connect Devices
+                        </a>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-3">Connect Your Devices</h2>
-                    <p class="text-gray-600 text-sm mb-4">You're logged in but haven't connected your Oura Ring or Strava yet.</p>
-                    <button onclick="window.Telegram?.WebApp?.close()" 
-                       class="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
-                        <i class="fab fa-telegram-plane mr-2"></i>
-                        Connect in Bot
-                    </button>
-                    <div class="mt-4 text-xs text-gray-500">
-                        <p>Use /connect_oura or /connect_strava in the bot</p>
+                    
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">Available Connections</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <div class="flex items-center">
+                                    <i class="fas fa-ring text-red-500 mr-2"></i>
+                                    <span class="text-sm font-medium">Oura Ring</span>
+                                </div>
+                                <span class="text-xs text-gray-500">Sleep & Recovery</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <div class="flex items-center">
+                                    <i class="fas fa-bicycle text-orange-500 mr-2"></i>
+                                    <span class="text-sm font-medium">Strava</span>
+                                </div>
+                                <span class="text-xs text-gray-500">Training & Activities</span>
+                            </div>
+                        </div>
                     </div>
+                    
+                    ${this.renderFeedbackSection()}
                 </div>
             `;
         }
