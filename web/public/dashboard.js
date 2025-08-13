@@ -77,8 +77,13 @@ class FitlinkDashboard {
                     console.log('Language:', user.language_code);
                     console.log('Is Premium:', user.is_premium);
                     
-                    await this.authenticateTelegramUser(user.id, tg.initData);
-                    return;
+                    try {
+                        await this.authenticateTelegramUser(user.id, tg.initData);
+                        return; // Success - exit here
+                    } catch (error) {
+                        console.error('Authentication failed for user:', user.id, error);
+                        // Continue to show error with debug info
+                    }
                 }
                 
                 // Check if initData contains user info but initDataUnsafe doesn't
@@ -1271,16 +1276,35 @@ class FitlinkDashboard {
                                 <span class="font-mono text-blue-600">${debugInfo.userName}</span>
                             </div>
                         </div>
+                        
+                        ${debugInfo.hasUser ? `
+                            <div class="mt-3 p-2 bg-blue-50 rounded text-center">
+                                <p class="text-xs text-blue-800">
+                                    🔄 User data found! If you're still seeing this screen, 
+                                    there may be a database connection issue.
+                                </p>
+                            </div>
+                        ` : ''}
                     </div>
                     
                     <div class="glass-card p-4 rounded-xl shadow-lg text-center">
-                        <h3 class="text-md font-bold text-gray-800 mb-2">🛠️ Fix Steps</h3>
-                        <p class="text-gray-600 text-xs mb-3">If User Data shows ❌ No, the WebApp isn't properly connected</p>
-                        <a href="https://t.me/the_fitlink_bot" 
-                           class="inline-block px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
-                            <i class="fab fa-telegram-plane mr-1"></i>
-                            Return to Bot
-                        </a>
+                        <h3 class="text-md font-bold text-gray-800 mb-2">🛠️ Actions</h3>
+                        <div class="space-y-2">
+                            ${debugInfo.hasUser ? `
+                                <button onclick="window.dashboard?.authenticateTelegramUser(${debugInfo.userId}, 'manual_retry').catch(e => alert('Auth failed: ' + e.message))" 
+                                   class="inline-block px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">
+                                    🔄 Retry Authentication
+                                </button>
+                            ` : ''}
+                            <a href="https://t.me/the_fitlink_bot" 
+                               class="inline-block px-3 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
+                                <i class="fab fa-telegram-plane mr-1"></i>
+                                Return to Bot
+                            </a>
+                        </div>
+                        <p class="text-gray-600 text-xs mt-2">
+                            ${debugInfo.hasUser ? 'User data found - try retry button' : 'No user data - return to bot'}
+                        </p>
                     </div>
                 </div>
             `;
