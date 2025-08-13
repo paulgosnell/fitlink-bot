@@ -242,9 +242,65 @@ git push origin main  # GitHub Actions deploys automatically
 
 ### **How Netlify Proxy Works**
 1. External request hits `fitlinkbot.netlify.app`
-2. Netlify proxy adds `Authorization: Bearer <anon-key>` header
-3. Request forwarded to corresponding Supabase function
-4. Supabase function processes with proper authentication
+2. Netlify edge function (proxy) intercepts request
+3. Proxy adds `Authorization: Bearer <anon-key>` header
+4. Request forwarded to corresponding Supabase function
+5. Supabase function processes with proper authentication
+6. **CRITICAL**: Proxy preserves response Content-Type headers for proper HTML rendering
+
+#### **Netlify Edge Function Configuration**
+```javascript
+// netlify/edge-functions/oauth-[provider]-proxy.js
+export default async (request, context) => {
+  // Forward with auth header
+  const response = await fetch(targetUrl, {
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': request.headers.get('Content-Type') || 'application/json'
+    },
+    redirect: 'manual' // Pass through 302 redirects
+  });
+
+  // CRITICAL: Preserve Content-Type for HTML responses
+  const responseData = await response.text();
+  const contentType = response.headers.get('Content-Type') || 'text/html';
+  
+  return new Response(responseData, {
+    status: response.status,
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'no-cache' // Prevent caching issues
+    }
+  });
+};
+
+// CRITICAL: Path configuration
+export const config = {
+  path: ["/oauth-[provider]", "/oauth-[provider]/*"]
+};
+```
+
+#### **Netlify Configuration (netlify.toml)**
+```toml
+# CRITICAL: Explicit edge function mappings
+[[edge_functions]]
+  function = "oauth-oura-proxy"
+  path = "/oauth-oura/*"
+
+[[edge_functions]]
+  function = "oauth-strava-proxy"
+  path = "/oauth-strava/*"
+
+[[edge_functions]]
+  function = "telegram-proxy"
+  path = "/api/telegram-webhook"
+
+# Global redirect AFTER edge functions
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+```
 
 ### **Required Environment Variables**
 - **Supabase**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
@@ -282,9 +338,15 @@ git push origin main  # GitHub Actions deploys automatically
 - ❌ Don't assume direct Supabase access works (needs auth headers)
 
 ### **Architecture Confusion**  
-- ❌ Don't create Netlify Edge Functions (this project doesn't use them)
-- ❌ Don't remove Netlify proxy layer (breaks authentication)
-- ❌ Don't put business logic in Netlify (all logic is in Supabase)
+- ❌ Don't remove Netlify edge function proxies (breaks authentication)
+- ❌ Don't put business logic in Netlify edge functions (all logic stays in Supabase)
+- ❌ Don't create additional Netlify edge functions beyond the required proxies
+
+### **HTML Rendering Issues**
+- ❌ Don't ignore Content-Type headers in proxy responses
+- ❌ Don't cache HTML responses (use `Cache-Control: no-cache`)
+- ❌ Don't rely on config exports only (use explicit netlify.toml mappings)
+- ❌ Don't forget `redirect: 'manual'` for OAuth flows
 
 ### **Deployment Mistakes**
 - ❌ Don't deploy functions via CLI during development (use GitHub Actions)
@@ -303,6 +365,54 @@ curl https://fitlinkbot.netlify.app/oauth-oura/start?user_id=12345
 # Strava OAuth start (via proxy)  
 curl https://fitlinkbot.netlify.app/oauth-strava/start?user_id=12345
 ```
+
+## 🔧 TROUBLESHOOTING GUIDE
+
+### **Problem: OAuth Success Page Shows Raw HTML**
+```
+Symptoms: User sees HTML code instead of styled success page
+Root Cause: Netlify proxy not preserving Content-Type headers
+```
+
+**Solution Checklist:**
+1. ✅ Verify `Content-Type: text/html; charset=UTF-8` in Supabase function
+2. ✅ Ensure Netlify proxy preserves `response.headers.get('Content-Type')`
+3. ✅ Add `Cache-Control: no-cache` to prevent browser caching
+4. ✅ Check explicit edge function mappings in `netlify.toml`
+5. ✅ Verify edge function `config.path` matches netlify.toml paths
+
+**Debug Steps:**
+```bash
+# Check Content-Type being returned
+curl -v https://fitlinkbot.netlify.app/oauth-oura/callback?code=test&state=123_test
+
+# Should show: Content-Type: text/html; charset=UTF-8
+# Should NOT show: Content-Type: text/plain
+```
+
+### **Problem: OAuth Redirect URI Invalid**
+```
+Symptoms: "redirect_uri not found in application redirect URIs"
+Root Cause: Provider OAuth function using wrong callback URL
+```
+
+**Solution Checklist:**
+1. ✅ Use Netlify proxy URL: `https://fitlinkbot.netlify.app/oauth-[provider]/callback`
+2. ✅ NOT direct Supabase URL: `umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/...`
+3. ✅ Update both authorization URL generation AND token exchange
+4. ✅ Verify provider app settings match exact callback URL
+
+### **Problem: Missing Authorization Header (401)**
+```
+Symptoms: "Missing authorization header" from Supabase
+Root Cause: Direct calls bypassing Netlify proxy
+```
+
+**Solution Checklist:**
+1. ✅ All user-facing URLs must use `fitlinkbot.netlify.app`
+2. ✅ Netlify edge functions must add `Authorization: Bearer <anon-key>`
+3. ✅ Check edge function configuration and deployment
+4. ✅ Verify `SUPABASE_ANON_KEY` is correct and not expired
 
 ---
 
