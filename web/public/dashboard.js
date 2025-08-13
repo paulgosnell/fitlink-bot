@@ -565,42 +565,42 @@ class FitlinkDashboard {
             <section class="mb-6">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">Health Status</h2>
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="glass-card metric-card p-6 rounded-2xl shadow-lg">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-700">Overall Health</h3>
+                    <div class="glass-card metric-card p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-gray-700">Overall</h3>
                             <div class="status-indicator status-${overallStatus} ${overallStatus === 'optimal' ? 'pulse-dot' : ''}"></div>
                         </div>
-                        <div class="text-3xl font-bold text-${config.color}-600 mb-2">${config.text}</div>
-                        <p class="text-sm text-gray-500">${this.getStatusMessage(overallStatus, predictive_flags)}</p>
+                        <div class="text-xl font-bold text-${config.color}-600 mb-1">${config.text}</div>
+                        <p class="text-xs text-gray-500">${this.getStatusMessage(overallStatus, predictive_flags)}</p>
                     </div>
 
-                    <div class="glass-card metric-card p-6 rounded-2xl shadow-lg">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-700">HRV Trend</h3>
+                    <div class="glass-card metric-card p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-gray-700">HRV</h3>
                             <i class="fas fa-arrow-${recent.hrv_pattern.trend > 0 ? 'up' : recent.hrv_pattern.trend < 0 ? 'down' : 'right'} trend-${recent.hrv_pattern.trend > 0 ? 'up' : recent.hrv_pattern.trend < 0 ? 'down' : 'stable'}"></i>
                         </div>
-                        <div class="text-3xl font-bold text-gray-800 mb-2">${recent.hrv_pattern.avg.toFixed(1)}</div>
-                        <p class="text-sm text-${recent.hrv_pattern.trend > 0 ? 'green' : recent.hrv_pattern.trend < 0 ? 'red' : 'gray'}-600">
+                        <div class="text-xl font-bold text-gray-800 mb-1">${recent.hrv_pattern.avg.toFixed(1)}</div>
+                        <p class="text-xs text-${recent.hrv_pattern.trend > 0 ? 'green' : recent.hrv_pattern.trend < 0 ? 'red' : 'gray'}-600">
                             ${recent.hrv_pattern.trend > 0 ? '+' : ''}${recent.hrv_pattern.trend.toFixed(1)}% ${recent.hrv_pattern.trend > 0 ? 'improving' : recent.hrv_pattern.trend < 0 ? 'declining' : 'stable'}
                         </p>
                     </div>
 
-                    <div class="glass-card metric-card p-6 rounded-2xl shadow-lg">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-700">Sleep Quality</h3>
+                    <div class="glass-card metric-card p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-gray-700">Sleep</h3>
                             <i class="fas fa-${recent.sleep_trend === 'improving' ? 'arrow-up' : recent.sleep_trend === 'declining' ? 'arrow-down' : 'minus'} trend-${recent.sleep_trend === 'improving' ? 'up' : recent.sleep_trend === 'declining' ? 'down' : 'stable'}"></i>
                         </div>
-                        <div class="text-3xl font-bold text-gray-800 mb-2">${this.getLatestSleepEfficiency()}%</div>
-                        <p class="text-sm text-gray-600">${recent.sleep_trend === 'no_data' ? 'No recent data' : recent.sleep_trend + ' pattern'}</p>
+                        <div class="text-xl font-bold text-gray-800 mb-1">${this.getLatestSleepEfficiency()}%</div>
+                        <p class="text-xs text-gray-600">${recent.sleep_trend === 'no_data' ? 'No data' : recent.sleep_trend}</p>
                     </div>
 
-                    <div class="glass-card metric-card p-6 rounded-2xl shadow-lg">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-700">Training Load</h3>
+                    <div class="glass-card metric-card p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-gray-700">Training</h3>
                             <i class="fas fa-arrow-up trend-up"></i>
                         </div>
-                        <div class="text-3xl font-bold text-gray-800 mb-2">${recent.training_load.current}</div>
-                        <p class="text-sm text-blue-600">TSS ${recent.training_load.current > 0 ? 'active' : 'rest'} phase</p>
+                        <div class="text-xl font-bold text-gray-800 mb-1">${recent.training_load.current}</div>
+                        <p class="text-xs text-blue-600">TSS ${recent.training_load.current > 0 ? 'active' : 'rest'}</p>
                     </div>
                 </div>
             </section>
@@ -611,37 +611,37 @@ class FitlinkDashboard {
         const { recent, predictive_flags } = summary;
         
         return `
-            <section class="mb-8">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">Deep Analysis Insights</h2>
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div class="glass-card p-8 rounded-2xl shadow-lg">
-                        <h3 class="text-xl font-bold text-gray-800 mb-6">30-Day Trend Analysis</h3>
-                        <div class="data-viz mb-6">
+            <section class="mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Deep Analysis Insights</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">30-Day Trend Analysis</h3>
+                        <div class="data-viz mb-4 h-32">
                             <div class="chart-line"></div>
-                            <div class="absolute top-4 left-4 text-sm text-gray-600">
-                                <span class="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                            <div class="absolute top-2 left-2 text-xs text-gray-600">
+                                <span class="inline-block w-2 h-2 bg-purple-500 rounded-full mr-1"></span>
                                 Real HRV Pattern Data
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <h4 class="font-semibold text-gray-700 mb-2">Sleep Consistency</h4>
-                                <div class="text-2xl font-bold text-${summary.weekly.sleep_consistency > 75 ? 'green' : summary.weekly.sleep_consistency > 50 ? 'yellow' : 'red'}-600">
+                                <h4 class="font-semibold text-gray-700 mb-1 text-sm">Sleep Consistency</h4>
+                                <div class="text-lg font-bold text-${summary.weekly.sleep_consistency > 75 ? 'green' : summary.weekly.sleep_consistency > 50 ? 'yellow' : 'red'}-600">
                                     ${summary.weekly.sleep_consistency.toFixed(0)}/100
                                 </div>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-gray-700 mb-2">Recovery Status</h4>
-                                <div class="text-2xl font-bold text-${recent.energy_pattern === 'consistent' ? 'green' : recent.energy_pattern === 'variable' ? 'yellow' : 'red'}-600">
+                                <h4 class="font-semibold text-gray-700 mb-1 text-sm">Recovery Status</h4>
+                                <div class="text-lg font-bold text-${recent.energy_pattern === 'consistent' ? 'green' : recent.energy_pattern === 'variable' ? 'yellow' : 'red'}-600">
                                     ${recent.energy_pattern === 'consistent' ? 'Strong' : recent.energy_pattern === 'variable' ? 'Variable' : recent.energy_pattern === 'declining' ? 'Declining' : 'Unknown'}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="glass-card p-8 rounded-2xl shadow-lg">
-                        <h3 class="text-xl font-bold text-gray-800 mb-6">Predictive Health Alerts</h3>
-                        <div class="space-y-4">
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Predictive Health Alerts</h3>
+                        <div class="space-y-3">
                             ${this.renderPredictiveAlert('Peak Performance', predictive_flags.peak_performance_window, 'green', 'fa-bolt')}
                             ${this.renderPredictiveAlert('Illness Risk', predictive_flags.illness_risk, this.getRiskColor(predictive_flags.illness_risk), 'fa-shield-alt')}
                             ${this.renderPredictiveAlert('Overtraining Risk', predictive_flags.overtraining_risk, this.getRiskColor(predictive_flags.overtraining_risk), 'fa-exclamation-triangle')}
@@ -663,24 +663,24 @@ class FitlinkDashboard {
         };
         
         return `
-            <div class="bg-${color}-50 border border-${color}-200 p-4 rounded-lg">
-                <div class="flex items-center mb-2">
-                    <i class="fas ${icon} text-${color}-600 mr-3"></i>
-                    <h4 class="font-semibold text-${color}-800">${title}</h4>
+            <div class="bg-${color}-50 border border-${color}-200 p-3 rounded-lg">
+                <div class="flex items-center mb-1">
+                    <i class="fas ${icon} text-${color}-600 mr-2 text-sm"></i>
+                    <h4 class="font-semibold text-${color}-800 text-sm">${title}</h4>
                 </div>
-                <p class="text-${color}-700 text-sm">${messages[title]}</p>
+                <p class="text-${color}-700 text-xs">${messages[title]}</p>
             </div>
         `;
     }
 
     renderHRVAlerts(alerts) {
         return alerts.map(alert => `
-            <div class="bg-orange-50 border border-orange-200 p-4 rounded-lg">
-                <div class="flex items-center mb-2">
-                    <i class="fas fa-heartbeat text-orange-600 mr-3"></i>
-                    <h4 class="font-semibold text-orange-800">HRV Alert</h4>
+            <div class="bg-orange-50 border border-orange-200 p-3 rounded-lg">
+                <div class="flex items-center mb-1">
+                    <i class="fas fa-heartbeat text-orange-600 mr-2 text-sm"></i>
+                    <h4 class="font-semibold text-orange-800 text-sm">HRV Alert</h4>
                 </div>
-                <p class="text-orange-700 text-sm">${alert}</p>
+                <p class="text-orange-700 text-xs">${alert}</p>
             </div>
         `).join('');
     }
@@ -689,18 +689,18 @@ class FitlinkDashboard {
         const { weekly } = summary;
         
         return `
-            <section class="mb-8">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">Weekly Performance Insights</h2>
-                <div class="grid md:grid-cols-3 gap-6">
-                    <div class="glass-card p-6 rounded-2xl shadow-lg">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Training Progression</h3>
-                        <div class="text-center mb-4">
-                            <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <i class="fas ${this.getProgressionIcon(weekly.training_progression)} text-2xl text-white"></i>
+            <section class="mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Weekly Performance Insights</h2>
+                <div class="space-y-4">
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Training Progression</h3>
+                        <div class="text-center mb-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <i class="fas ${this.getProgressionIcon(weekly.training_progression)} text-lg text-white"></i>
                             </div>
-                            <div class="text-2xl font-bold text-blue-600 capitalize">${weekly.training_progression}</div>
+                            <div class="text-lg font-bold text-blue-600 capitalize">${weekly.training_progression}</div>
                         </div>
-                        <div class="space-y-2 text-sm text-gray-600">
+                        <div class="grid grid-cols-2 gap-3 text-xs text-gray-600">
                             <div class="flex justify-between">
                                 <span>Quality Sessions:</span>
                                 <span class="font-semibold">${weekly.performance_markers.quality_sessions}</span>
@@ -712,47 +712,47 @@ class FitlinkDashboard {
                         </div>
                     </div>
 
-                    <div class="glass-card p-6 rounded-2xl shadow-lg">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Stress Indicators</h3>
-                        <div class="space-y-4">
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Stress Indicators</h3>
+                        <div class="space-y-3">
                             <div>
-                                <div class="flex justify-between mb-2">
-                                    <span class="text-sm text-gray-600">Poor HRV Days</span>
-                                    <span class="text-sm font-semibold text-${weekly.stress_indicators.poor_hrv_days <= 2 ? 'green' : weekly.stress_indicators.poor_hrv_days <= 4 ? 'yellow' : 'red'}-600">
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-xs text-gray-600">Poor HRV Days</span>
+                                    <span class="text-xs font-semibold text-${weekly.stress_indicators.poor_hrv_days <= 2 ? 'green' : weekly.stress_indicators.poor_hrv_days <= 4 ? 'yellow' : 'red'}-600">
                                         ${weekly.stress_indicators.poor_hrv_days}/7
                                     </span>
                                 </div>
-                                <div class="bg-gray-200 rounded-full h-2">
-                                    <div class="bg-${weekly.stress_indicators.poor_hrv_days <= 2 ? 'green' : weekly.stress_indicators.poor_hrv_days <= 4 ? 'yellow' : 'red'}-500 h-2 rounded-full" 
+                                <div class="bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-${weekly.stress_indicators.poor_hrv_days <= 2 ? 'green' : weekly.stress_indicators.poor_hrv_days <= 4 ? 'yellow' : 'red'}-500 h-1.5 rounded-full" 
                                          style="width: ${(weekly.stress_indicators.poor_hrv_days / 7) * 100}%"></div>
                                 </div>
                             </div>
                             <div>
-                                <div class="flex justify-between mb-2">
-                                    <span class="text-sm text-gray-600">Elevated RHR Days</span>
-                                    <span class="text-sm font-semibold text-${weekly.stress_indicators.elevated_rhr_days <= 1 ? 'green' : weekly.stress_indicators.elevated_rhr_days <= 3 ? 'yellow' : 'red'}-600">
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-xs text-gray-600">Elevated RHR Days</span>
+                                    <span class="text-xs font-semibold text-${weekly.stress_indicators.elevated_rhr_days <= 1 ? 'green' : weekly.stress_indicators.elevated_rhr_days <= 3 ? 'yellow' : 'red'}-600">
                                         ${weekly.stress_indicators.elevated_rhr_days}/7
                                     </span>
                                 </div>
-                                <div class="bg-gray-200 rounded-full h-2">
-                                    <div class="bg-${weekly.stress_indicators.elevated_rhr_days <= 1 ? 'green' : weekly.stress_indicators.elevated_rhr_days <= 3 ? 'yellow' : 'red'}-500 h-2 rounded-full" 
+                                <div class="bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-${weekly.stress_indicators.elevated_rhr_days <= 1 ? 'green' : weekly.stress_indicators.elevated_rhr_days <= 3 ? 'yellow' : 'red'}-500 h-1.5 rounded-full" 
                                          style="width: ${(weekly.stress_indicators.elevated_rhr_days / 7) * 100}%"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="glass-card p-6 rounded-2xl shadow-lg">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Adaptation Signals</h3>
-                        <div class="space-y-3">
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">Adaptation Signals</h3>
+                        <div class="space-y-2">
                             ${weekly.adaptation_signals.length > 0 ? 
                                 weekly.adaptation_signals.map(signal => `
                                     <div class="flex items-center">
-                                        <i class="fas fa-check-circle text-green-500 mr-3"></i>
-                                        <span class="text-sm text-gray-700">${signal}</span>
+                                        <i class="fas fa-check-circle text-green-500 mr-2 text-xs"></i>
+                                        <span class="text-xs text-gray-700">${signal}</span>
                                     </div>
                                 `).join('') : 
-                                '<div class="flex items-center"><i class="fas fa-clock text-gray-400 mr-3"></i><span class="text-sm text-gray-500">Building adaptation data...</span></div>'
+                                '<div class="flex items-center"><i class="fas fa-clock text-gray-400 mr-2 text-xs"></i><span class="text-xs text-gray-500">Building adaptation data...</span></div>'
                             }
                         </div>
                     </div>
@@ -765,17 +765,19 @@ class FitlinkDashboard {
         const habits = this.generatePersonalizedHabits(summary);
         
         return `
-            <section class="mb-8">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">Today's Micro-Habit Recommendations</h2>
-                <div class="glass-card p-8 rounded-2xl shadow-lg">
-                    <div class="grid md:grid-cols-3 gap-6">
+            <section class="mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Today's Micro-Habits</h2>
+                <div class="glass-card p-4 rounded-xl shadow-lg">
+                    <div class="space-y-4">
                         ${habits.map(habit => `
-                            <div class="text-center">
-                                <div class="w-16 h-16 bg-gradient-to-br ${habit.gradient} rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas ${habit.icon} text-2xl text-white"></i>
+                            <div class="flex items-start space-x-3">
+                                <div class="w-10 h-10 bg-gradient-to-br ${habit.gradient} rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i class="fas ${habit.icon} text-sm text-white"></i>
                                 </div>
-                                <h3 class="font-semibold text-gray-800 mb-2">${habit.time}</h3>
-                                <p class="text-sm text-gray-600">${habit.description}</p>
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-gray-800 text-sm mb-1">${habit.time}</h3>
+                                    <p class="text-xs text-gray-600">${habit.description}</p>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
@@ -846,23 +848,23 @@ class FitlinkDashboard {
         const stravaStatus = this.healthData.activities.length > 0 ? 'optimal' : 'warning';
         
         return `
-            <section class="mb-8">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">Data Integration Status</h2>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div class="glass-card p-6 rounded-2xl shadow-lg">
-                        <div class="flex items-center justify-between mb-4">
+            <section class="mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Data Integration Status</h2>
+                <div class="space-y-3">
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center">
-                                <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl flex items-center justify-center mr-4">
-                                    <i class="fas fa-ring text-white text-xl"></i>
+                                <div class="w-8 h-8 bg-gradient-to-br from-red-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-ring text-white text-sm"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-gray-800">Oura Ring</h3>
-                                    <p class="text-sm text-gray-600">Sleep & Recovery Data</p>
+                                    <h3 class="font-semibold text-gray-800 text-sm">Oura Ring</h3>
+                                    <p class="text-xs text-gray-600">Sleep & Recovery Data</p>
                                 </div>
                             </div>
                             <div class="status-indicator status-${ouraStatus}"></div>
                         </div>
-                        <div class="text-sm text-gray-600 space-y-1">
+                        <div class="text-xs text-gray-600 space-y-1">
                             <div class="flex justify-between">
                                 <span>Data Points:</span>
                                 <span class="font-semibold">${this.healthData.sleep.length} days</span>
@@ -876,20 +878,20 @@ class FitlinkDashboard {
                         </div>
                     </div>
 
-                    <div class="glass-card p-6 rounded-2xl shadow-lg">
-                        <div class="flex items-center justify-between mb-4">
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center">
-                                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-4">
-                                    <i class="fas fa-bicycle text-white text-xl"></i>
+                                <div class="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-bicycle text-white text-sm"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-gray-800">Strava</h3>
-                                    <p class="text-sm text-gray-600">Training & Activities</p>
+                                    <h3 class="font-semibold text-gray-800 text-sm">Strava</h3>
+                                    <p class="text-xs text-gray-600">Training & Activities</p>
                                 </div>
                             </div>
                             <div class="status-indicator status-${stravaStatus}"></div>
                         </div>
-                        <div class="text-sm text-gray-600 space-y-1">
+                        <div class="text-xs text-gray-600 space-y-1">
                             <div class="flex justify-between">
                                 <span>Activities:</span>
                                 <span class="font-semibold">${this.healthData.activities.length} recorded</span>
@@ -909,35 +911,35 @@ class FitlinkDashboard {
 
     renderFeedbackSection() {
         return `
-            <section class="mb-8">
-                <div class="glass-card p-8 rounded-2xl shadow-lg text-center">
-                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-6">
-                        <i class="fas fa-comment-alt text-white text-2xl"></i>
+            <section class="mb-6">
+                <div class="glass-card p-4 rounded-xl shadow-lg text-center">
+                    <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-comment-alt text-white text-sm"></i>
                     </div>
-                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Share Your Feedback</h3>
-                    <p class="text-gray-600 mb-6">Help us improve your health analytics experience. Every suggestion counts!</p>
-                    <div class="space-y-3">
-                        <div class="flex flex-wrap justify-center gap-3">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Send Feedback</h3>
+                    <p class="text-gray-600 mb-4 text-sm">Help us improve your experience</p>
+                    <div class="space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
                             <button onclick="this.sendFeedback('bug_report')" 
-                               class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
-                                <i class="fas fa-bug mr-2"></i>Report Bug
+                               class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-all">
+                                <i class="fas fa-bug mr-1"></i>Bug
                             </button>
                             <button onclick="this.sendFeedback('feature_request')" 
-                               class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
-                                <i class="fas fa-lightbulb mr-2"></i>Request Feature
+                               class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-all">
+                                <i class="fas fa-lightbulb mr-1"></i>Feature
                             </button>
                             <button onclick="this.sendFeedback('compliment')" 
-                               class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
-                                <i class="fas fa-thumbs-up mr-2"></i>Say Thanks
+                               class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition-all">
+                                <i class="fas fa-thumbs-up mr-1"></i>Thanks
+                            </button>
+                            <button onclick="this.sendFeedback('general_feedback')" 
+                               class="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-all">
+                                <i class="fas fa-comment mr-1"></i>Other
                             </button>
                         </div>
-                        <button onclick="this.sendFeedback('general_feedback')" 
-                           class="px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
-                            <i class="fas fa-comment mr-2"></i>General Feedback
-                        </button>
                     </div>
-                    <div class="mt-4 text-sm text-gray-500">
-                        <p>Messages are sent directly to our team via Telegram</p>
+                    <div class="mt-3 text-xs text-gray-500">
+                        <p>Messages sent to our team via Telegram</p>
                     </div>
                 </div>
             </section>
