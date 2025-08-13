@@ -74,6 +74,5 @@ jobs:
         PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       run: |
         echo "🗄️ Updating database schema..."
-        # Skip database schema update for now - focus on function deployment
-        echo "⏭️ Skipping database schema update (functions deployment is priority)"
-        echo "✅ Database schema update skipped - functions will deploy successfully!"
+        supabase db push --project-ref $PROJECT_REF
+        echo "✅ Database schema updated successfully!"
