@@ -91,43 +91,43 @@ class FitlinkDashboard {
             // Convert to number for consistency
             const userId = parseInt(telegramUserId);
             
-            // Try both number and string versions to handle data type issues
-            let user = null;
-            let error = null;
-            
-            // First try as number (BigInt stored as number)
-            const { data: userData, error: userError } = await this.supabaseService
-                .from('users')
-                .select('*')
-                .eq('telegram_id', userId)
-                .single();
-                
-            if (!userError && userData) {
-                user = userData;
-            } else if (userError && userError.code === 'PGRST116') {
-                // Try as string if number failed
-                const { data: userStrData, error: userStrError } = await this.supabaseService
-                    .from('users')
-                    .select('*')
-                    .eq('telegram_id', String(userId))
-                    .single();
-                    
-                if (!userStrError && userStrData) {
-                    user = userStrData;
-                } else {
-                    error = userStrError || userError;
-                }
-            } else {
-                error = userError;
+            // Use the new user-lookup endpoint instead of direct database access
+            const response = await fetch('https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-test/user-lookup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ telegram_id: userId })
+            });
+
+            if (!response.ok) {
+                throw new Error(`User lookup failed: ${response.status}`);
             }
 
-            if (error || !user) {
-                throw new Error('User not found');
-            }
+            const userData = await response.json();
             
-            return await this.processFoundUser(user);
+            if (userData.error) {
+                throw new Error(userData.error);
+            }
+
+            // Store the user data and health data
+            this.currentUser = userData.user;
+            this.healthData = {
+                sleep: userData.health_data.sleep,
+                activities: userData.health_data.activities,
+                summary: this.generateHealthSummary(userData.health_data.sleep, userData.health_data.activities)
+            };
+
+            // Check connected providers
+            await this.checkConnectedProviders();
+            
+            // Render the dashboard
+            this.renderDashboard();
+            
+            return userData.user;
             
         } catch (error) {
+            console.error('Authentication error:', error);
             throw error;
         }
     }
@@ -251,14 +251,9 @@ class FitlinkDashboard {
     }
     
     async checkConnectedProviders() {
-        const { data: providers, error } = await this.supabaseService
-            .from('providers')
-            .select('provider, is_active, created_at')
-            .eq('user_id', this.currentUser.id);
-            
-        if (providers) {
-            const activeProviders = providers.filter(p => p.is_active);
-            this.connectedProviders = activeProviders;
+        // Use the providers data we already loaded from the endpoint
+        if (this.healthData && this.healthData.providers) {
+            this.connectedProviders = this.healthData.providers.filter(p => p.is_active);
         } else {
             this.connectedProviders = [];
         }
