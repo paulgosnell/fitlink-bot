@@ -94,9 +94,15 @@ serve(async (req) => {
     <div class="container">
         <h1>✅ Oura Ring Connected!</h1>
         <p>Your Oura Ring has been successfully connected to Fitlink Bot.</p>
-        <p class="success">You can now close this window and return to Telegram.</p>
+        <p class="success">Redirecting you back to Telegram to check your status...</p>
     </div>
     <script>
+        // Redirect to Telegram bot with /status command after 2 seconds
+        setTimeout(() => {
+            window.location.href = 'https://t.me/the_fitlink_bot?start=status';
+        }, 2000);
+        
+        // Also try to close window as fallback
         setTimeout(() => {
             window.close();
         }, 3000);

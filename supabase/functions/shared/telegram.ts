@@ -402,11 +402,18 @@ async function handleCommand(
   supabase: any,
   botToken: string
 ): Promise<void> {
-  const cmd = command.split(" ")[0].toLowerCase();
+  const parts = command.split(" ");
+  const cmd = parts[0].toLowerCase();
+  const parameter = parts[1]?.toLowerCase();
 
   switch (cmd) {
     case "/start":
-      await handleStartCommand(chatId, botToken);
+      // Handle deep link parameters from OAuth success
+      if (parameter === "status") {
+        await handleStatusCommand(chatId, userId, supabase, botToken);
+      } else {
+        await handleStartCommand(chatId, botToken);
+      }
       break;
     case "/connect_oura":
       await handleConnectOura(chatId, userId, botToken);
