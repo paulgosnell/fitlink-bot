@@ -184,23 +184,7 @@ async function handleStartCommand(
   supabase: SupabaseClient,
   botToken: string
 ): Promise<void> {
-  const welcomeMessage = `👋 Hello ${user.first_name || 'there'}!
-
-Welcome to **Fitlink Bot** — your AI-powered health briefing assistant.
-
-I combine data from your Oura Ring, Strava activities, and local weather to create personalised morning briefings that help you optimise your training and recovery.
-
-**What I can do:**
-• 📊 Daily health briefings with sleep, training load, and weather insights
-• 🎯 Personalised training recommendations based on your data
-• ⚡ Smart recovery suggestions when you need them
-• 🌤️ Weather-aware exercise timing
-
-**Privacy first:** Your data stays secure, tokens are encrypted, and you control everything.
-
-Let's get started! 👇`;
-
-  await sendTelegramMarkdownMessage(botToken, chatId, welcomeMessage);
+  // Just show the main menu with all functionality
   await showMainMenu(botToken, chatId, user, supabase);
 }
 
