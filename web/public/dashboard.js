@@ -15,22 +15,12 @@ class FitlinkDashboard {
     }
 
     async init() {
-        console.log('=== DASHBOARD INIT STARTED ===');
-        console.log('Window objects available:', {
-            Telegram: !!window.Telegram,
-            TelegramWebApp: !!(window.Telegram?.WebApp),
-            location: window.location.href
-        });
-        
         this.showLoading();
         await this.checkAuthStatus();
-        console.log('=== DASHBOARD INIT COMPLETED ===');
     }
 
     showLoading() {
-        console.log('showLoading called');
         const dashboard = document.getElementById('dashboard-content');
-        console.log('Dashboard element found:', !!dashboard);
         if (dashboard) {
             dashboard.innerHTML = `
                 <div class="flex items-center justify-center min-h-screen">
@@ -40,84 +30,45 @@ class FitlinkDashboard {
                     </div>
                 </div>
             `;
-            console.log('Loading spinner set');
-        } else {
-            console.error('Dashboard content element not found!');
         }
     }
 
     async checkAuthStatus() {
         try {
-            console.log('=== AUTHENTICATION DEBUG ===');
-            console.log('User Agent:', navigator.userAgent);
-            console.log('Referrer:', document.referrer);
-            console.log('Location:', window.location.href);
-            
             // Check if running in Telegram Web App
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
                 
-                console.log('=== TELEGRAM WEBAPP DATA ===');
-                console.log('Version:', tg.version);
-                console.log('Platform:', tg.platform);
-                console.log('ColorScheme:', tg.colorScheme);
-                console.log('IsExpanded:', tg.isExpanded);
-                console.log('ViewportHeight:', tg.viewportHeight);
-                console.log('InitData (raw):', tg.initData);
-                console.log('InitDataUnsafe (parsed):', tg.initDataUnsafe);
-                
                 // Check for user data in initDataUnsafe
                 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                     const user = tg.initDataUnsafe.user;
-                    console.log('=== USER FOUND IN TELEGRAM ===');
-                    console.log('User ID:', user.id);
-                    console.log('Username:', user.username);
-                    console.log('First Name:', user.first_name);
-                    console.log('Language:', user.language_code);
-                    console.log('Is Premium:', user.is_premium);
                     
                     try {
                         await this.authenticateTelegramUser(user.id, tg.initData);
                         return; // Success - exit here
                     } catch (error) {
-                        console.error('Authentication failed for user:', user.id, error);
-                        // Continue to show error with debug info
+                        this.showWebAppError();
+                        return;
                     }
                 }
-                
-                // Check if initData contains user info but initDataUnsafe doesn't
-                if (tg.initData && !tg.initDataUnsafe) {
-                    console.log('=== INIT DATA PARSING ISSUE ===');
-                    console.log('Raw initData present but initDataUnsafe empty');
-                    console.log('This might be a WebApp configuration issue');
-                }
-                
-                console.log('=== NO USER DATA IN TELEGRAM WEBAPP ===');
-                console.log('Checking URL parameters as fallback...');
                 
                 // Fallback: Check URL parameters
                 const urlParams = new URLSearchParams(window.location.search);
                 const userIdParam = urlParams.get('user_id');
                 
                 if (userIdParam) {
-                    console.log('Found user_id in URL:', userIdParam);
                     await this.authenticateTelegramUser(parseInt(userIdParam), 'url_param');
                     return;
                 }
                 
-                console.log('No user data available via WebApp or URL');
                 this.showWebAppError();
             } else {
-                console.log('=== NOT IN TELEGRAM WEBAPP ===');
-                console.log('Checking URL parameters...');
-                
                 // Check URL parameters for direct access
                 const urlParams = new URLSearchParams(window.location.search);
                 const userIdParam = urlParams.get('user_id');
                 
                 if (userIdParam) {
-                    console.log('Found user_id in URL (direct access):', userIdParam);
                     await this.authenticateTelegramUser(parseInt(userIdParam), 'direct_url');
                     return;
                 }
@@ -125,73 +76,64 @@ class FitlinkDashboard {
                 this.showNotLoggedIn();
             }
         } catch (error) {
-            console.error('Authentication check failed:', error);
             this.showWebAppError();
         }
     }
 
     async authenticateTelegramUser(telegramUserId, initData) {
         try {
-            console.log('=== AUTHENTICATION DEBUGGING ===');
-            console.log('Looking for telegram_id:', telegramUserId);
-            console.log('Supabase URL:', this.supabase.supabaseUrl);
+            // Convert to number for consistency
+            const userId = parseInt(telegramUserId);
             
-            // Test basic database connection
-            console.log('Testing database connection...');
-            const { data: testUsers, error: testError } = await this.supabase
-                .from('users')
-                .select('id, telegram_id, first_name')
-                .limit(3);
-                
-            console.log('Database connection test:', { testUsers, testError });
+            // Try both number and string versions to handle data type issues
+            let user = null;
+            let error = null;
             
-            if (testError) {
-                throw new Error(`Database connection failed: ${testError.message}`);
-            }
-            
-            // Search for your specific user
-            console.log('Searching for user with telegram_id:', telegramUserId);
-            const { data: user, error } = await this.supabase
+            // First try as number (BigInt stored as number)
+            const { data: userData, error: userError } = await this.supabase
                 .from('users')
                 .select('*')
-                .eq('telegram_id', telegramUserId)
+                .eq('telegram_id', userId)
                 .single();
-
-            console.log('=== USER QUERY RESULT ===');
-            console.log('User found:', user);
-            console.log('Error:', error);
-            console.log('Error code:', error?.code);
-            console.log('Error message:', error?.message);
-
-            if (error) {
-                if (error.code === 'PGRST116') {
-                    throw new Error('No user found with telegram_id ' + telegramUserId);
+                
+            if (!userError && userData) {
+                user = userData;
+            } else if (userError && userError.code === 'PGRST116') {
+                // Try as string if number failed
+                const { data: userStrData, error: userStrError } = await this.supabase
+                    .from('users')
+                    .select('*')
+                    .eq('telegram_id', String(userId))
+                    .single();
+                    
+                if (!userStrError && userStrData) {
+                    user = userStrData;
+                } else {
+                    error = userStrError || userError;
                 }
-                throw new Error(`Database query error: ${error.message}`);
-            }
-            
-            if (!user) {
-                throw new Error('User query returned null');
+            } else {
+                error = userError;
             }
 
-            console.log('=== SUCCESS ===');
-            console.log('Found user:', user.first_name, '(' + user.username + ')');
-            console.log('Database ID:', user.id);
-            console.log('Has Oura:', !!user.oura_user_id);
+            if (error || !user) {
+                throw new Error('User not found');
+            }
             
-            this.currentUser = user;
-            
-            // Check connected providers
-            await this.checkConnectedProviders();
-            await this.loadHealthData();
+            return await this.processFoundUser(user);
             
         } catch (error) {
-            console.error('=== AUTHENTICATION FAILED ===');
-            console.error('Error type:', typeof error);
-            console.error('Error message:', error.message);
-            console.error('Full error:', error);
             throw error;
         }
+    }
+
+    async processFoundUser(user) {
+        this.currentUser = user;
+        
+        // Check connected providers
+        await this.checkConnectedProviders();
+        await this.loadHealthData();
+        
+        return user;
     }
 
     async authenticateUser(userId, token) {
@@ -223,14 +165,12 @@ class FitlinkDashboard {
             this.currentUser = user;
             await this.loadHealthData();
         } catch (error) {
-            console.error('Authentication failed:', error);
             this.showNotLoggedIn();
         }
     }
 
     async loadHealthData() {
         try {
-            console.log('Loading health data...');
             this.isLoading = true;
             
             // Load health data from multiple tables
@@ -239,23 +179,14 @@ class FitlinkDashboard {
                 this.loadActivityData()
             ]);
 
-            console.log('Data loaded - Sleep:', sleepData.length, 'Activities:', activityData.length);
-
             this.healthData = {
                 sleep: sleepData,
                 activities: activityData,
                 summary: this.generateHealthSummary(sleepData, activityData)
             };
-            
-            console.log('Final health data summary:', {
-                sleepRecords: sleepData.length,
-                activityRecords: activityData.length,
-                hasData: sleepData.length > 0 || activityData.length > 0
-            });
 
             this.renderDashboard();
         } catch (error) {
-            console.error('Failed to load health data:', error);
             // If health data loading fails, just show no data state
             this.showNoData();
         } finally {
@@ -264,13 +195,9 @@ class FitlinkDashboard {
     }
 
     async loadSleepData() {
-        console.log('Loading sleep data for user_id:', this.currentUser.id);
-        
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
-        
-        console.log('Querying oura_sleep table since:', dateFilter);
 
         const { data, error } = await this.supabase
             .from('oura_sleep')
@@ -279,25 +206,17 @@ class FitlinkDashboard {
             .gte('date', dateFilter)
             .order('date', { ascending: false })
             .limit(30);
-
-        console.log('Sleep data query result:', { data, error, count: data?.length || 0 });
         
         if (error) {
-            console.error('Sleep data error:', error);
-            // Don't throw, just return empty array
             return [];
         }
         return data || [];
     }
 
     async loadActivityData() {
-        console.log('Loading activity data for user_id:', this.currentUser.id);
-        
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const dateFilter = thirtyDaysAgo.toISOString();
-        
-        console.log('Querying activities table since:', dateFilter);
 
         const { data, error } = await this.supabase
             .from('activities')
@@ -306,11 +225,8 @@ class FitlinkDashboard {
             .gte('start_time', dateFilter)
             .order('start_time', { ascending: false })
             .limit(50);
-
-        console.log('Activity data query result:', { data, error, count: data?.length || 0 });
         
         if (error) {
-            console.error('Activity data error:', error);
             return [];
         }
         return data || [];
@@ -329,18 +245,13 @@ class FitlinkDashboard {
     }
     
     async checkConnectedProviders() {
-        console.log('Checking connected providers for user_id:', this.currentUser.id);
-        
         const { data: providers, error } = await this.supabase
             .from('providers')
             .select('provider, is_active, created_at')
             .eq('user_id', this.currentUser.id);
             
-        console.log('Connected providers:', { providers, error });
-        
         if (providers) {
             const activeProviders = providers.filter(p => p.is_active);
-            console.log('Active providers:', activeProviders.map(p => p.provider));
             this.connectedProviders = activeProviders;
         } else {
             this.connectedProviders = [];
@@ -675,25 +586,15 @@ class FitlinkDashboard {
     renderDashboard() {
         const dashboard = document.getElementById('dashboard-content');
         if (!dashboard) {
-            console.error('Dashboard content element not found');
             return;
         }
-
-        console.log('Rendering dashboard with health data:', this.healthData);
-
-        console.log('Rendering dashboard - checking data availability...');
-        console.log('Sleep records:', this.healthData?.sleep?.length || 0);
-        console.log('Activity records:', this.healthData?.activities?.length || 0);
-        console.log('Connected providers:', this.connectedProviders?.map(p => p.provider) || []);
         
         if (!this.healthData || (!this.healthData.sleep.length && !this.healthData.activities.length)) {
-            console.log('No health data available, showing no data state');
             this.showNoData();
             return;
         }
 
         const { summary } = this.healthData;
-        console.log('Rendering dashboard sections with summary:', summary);
         
         dashboard.innerHTML = `
             ${this.renderStatusOverview(summary)}
@@ -703,8 +604,6 @@ class FitlinkDashboard {
             ${this.renderIntegrationStatus()}
             ${this.renderFeedbackSection()}
         `;
-        
-        console.log('Dashboard rendered successfully');
     }
 
     renderStatusOverview(summary) {
@@ -1182,7 +1081,6 @@ class FitlinkDashboard {
             this.showFeedbackSuccess(type);
 
         } catch (error) {
-            console.error('Error sending feedback:', error);
             alert('Error sending feedback. Please try again or send feedback directly in the bot.');
         }
     }
@@ -1350,7 +1248,6 @@ class FitlinkDashboard {
 
 
     showNoData() {
-        console.log('User authenticated but no health data available');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
@@ -1394,7 +1291,6 @@ class FitlinkDashboard {
     }
 
     showError(message) {
-        console.log('=== SHOWING ERROR STATE ===', message);
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
@@ -1453,24 +1349,18 @@ class FitlinkDashboard {
 
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded');
-    console.log('dashboard-content element exists:', !!document.getElementById('dashboard-content'));
-    
     const dashboard = new FitlinkDashboard();
     window.dashboard = dashboard; // Make available for debugging
     
     // Add a small delay to ensure Telegram WebApp is ready
     setTimeout(() => {
-        console.log('Starting dashboard initialization...');
         dashboard.init();
     }, 100);
 });
 
 // Also try initialization on window load as backup
 window.addEventListener('load', () => {
-    console.log('Window loaded');
     if (!window.dashboard) {
-        console.log('Dashboard not initialized yet, initializing now...');
         const dashboard = new FitlinkDashboard();
         window.dashboard = dashboard;
         dashboard.init();
