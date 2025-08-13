@@ -5,7 +5,9 @@ export default async (request, context) => {
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4OTQ1MTcsImV4cCI6MjA3MDQ3MDUxN30.brHKkPojybFjpW9kCbPTaRsGWlCmjrGEYmpDgCStSGo';
     
     // Forward to Supabase OAuth function with auth header
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/oauth-strava${url.pathname}${url.search}`, {
+    // Extract path after /oauth-strava
+    const supabasePath = url.pathname.replace('/oauth-strava', '');
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/oauth-strava${supabasePath}${url.search}`, {
       method: request.method,
       headers: {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
