@@ -13,10 +13,22 @@ export default async (request, context) => {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type': request.headers.get('Content-Type') || 'application/json'
       },
-      body: request.method !== 'GET' ? await request.text() : undefined
+      body: request.method !== 'GET' ? await request.text() : undefined,
+      redirect: 'manual' // Don't follow redirects - pass them through
     });
     
-    // Return Supabase response
+    // If it's a redirect, pass it through
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('Location');
+      return new Response('', {
+        status: response.status,
+        headers: {
+          'Location': location
+        }
+      });
+    }
+    
+    // Otherwise return the response normally
     const responseData = await response.text();
     return new Response(responseData, {
       status: response.status,
