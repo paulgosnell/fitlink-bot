@@ -18,6 +18,10 @@
   function = "telegram-proxy"
   path = "/api/telegram-webhook"
 
+[[edge_functions]]
+  function = "oauth-test-proxy"
+  path = "/oauth-test/*"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
