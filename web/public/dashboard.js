@@ -9,6 +9,12 @@ class FitlinkDashboard {
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NjQ4ODAsImV4cCI6MjA1MDU0MDg4MH0.xJVtJr4M_Hg1fGQ7qBGYXoW0Vx6yivfYnWCLw9_T5nE'
         );
         
+        // Create service role client for authenticated database access
+        this.supabaseService = createClient(
+            'https://umixefoxgjmdlvvtfnmr.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNDk2NDg4MCwiZXhwIjoyMDUwNTQwODgwfQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8'
+        );
+        
         this.currentUser = null;
         this.healthData = null;
         this.isLoading = false;
@@ -90,7 +96,7 @@ class FitlinkDashboard {
             let error = null;
             
             // First try as number (BigInt stored as number)
-            const { data: userData, error: userError } = await this.supabase
+            const { data: userData, error: userError } = await this.supabaseService
                 .from('users')
                 .select('*')
                 .eq('telegram_id', userId)
@@ -100,7 +106,7 @@ class FitlinkDashboard {
                 user = userData;
             } else if (userError && userError.code === 'PGRST116') {
                 // Try as string if number failed
-                const { data: userStrData, error: userStrError } = await this.supabase
+                const { data: userStrData, error: userStrError } = await this.supabaseService
                     .from('users')
                     .select('*')
                     .eq('telegram_id', String(userId))
@@ -199,7 +205,7 @@ class FitlinkDashboard {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
 
-        const { data, error } = await this.supabase
+        const { data, error } = await this.supabaseService
             .from('oura_sleep')
             .select('*')
             .eq('user_id', this.currentUser.id)
@@ -218,7 +224,7 @@ class FitlinkDashboard {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const dateFilter = thirtyDaysAgo.toISOString();
 
-        const { data, error } = await this.supabase
+        const { data, error } = await this.supabaseService
             .from('activities')
             .select('*')
             .eq('user_id', this.currentUser.id)
@@ -233,7 +239,7 @@ class FitlinkDashboard {
     }
 
     async loadBriefingLogs() {
-        const { data, error } = await this.supabase
+        const { data, error } = await this.supabaseService
             .from('brief_logs')
             .select('*')
             .eq('user_id', this.currentUser.id)
@@ -245,7 +251,7 @@ class FitlinkDashboard {
     }
     
     async checkConnectedProviders() {
-        const { data: providers, error } = await this.supabase
+        const { data: providers, error } = await this.supabaseService
             .from('providers')
             .select('provider, is_active, created_at')
             .eq('user_id', this.currentUser.id);
@@ -1225,10 +1231,11 @@ class FitlinkDashboard {
                         <h3 class="text-md font-bold text-gray-800 mb-2">🛠️ Actions</h3>
                         <div class="space-y-2">
                             ${debugInfo.hasUser ? `
-                                <button onclick="window.dashboard?.authenticateTelegramUser(${debugInfo.userId}, 'manual_retry').catch(e => alert('Auth failed: ' + e.message))" 
+                                <button onclick="window.dashboard?.authenticateTelegramUser(${debugInfo.userId}, 'manual_retry').catch(e => { document.getElementById('error-details').innerHTML = 'Auth Error: ' + e.message; })" 
                                    class="inline-block px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">
                                     🔄 Retry Authentication
                                 </button>
+                                <div id="error-details" class="mt-2 p-2 bg-red-100 text-red-800 text-xs rounded min-h-4"></div>
                             ` : ''}
                             <a href="https://t.me/the_fitlink_bot" 
                                class="inline-block px-3 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
