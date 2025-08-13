@@ -428,7 +428,7 @@ Try asking: "How did I sleep?" or "Should I train today?"`;
 
 async function handleConnectOura(chatId: number, userId: number, botToken: string): Promise<void> {
   const ouraClientId = Deno.env.get("OURA_CLIENT_ID");
-  const baseUrl = "https://fitlinkbot.netlify.app"; // Use Netlify proxy
+  const baseUrl = "https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1"; // Use direct Supabase functions
   
   const authUrl = `${baseUrl}/oauth-oura/start?user_id=${userId}`;
   
@@ -450,7 +450,7 @@ Click the button below to authorize Fitlink Bot to access your Oura data:`;
 
 async function handleConnectStrava(chatId: number, userId: number, botToken: string): Promise<void> {
   const stravaClientId = Deno.env.get("STRAVA_CLIENT_ID");
-  const baseUrl = "https://fitlinkbot.netlify.app"; // Use Netlify proxy
+  const baseUrl = "https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1"; // Use direct Supabase functions
   
   const authUrl = `${baseUrl}/oauth-strava/start?user_id=${userId}`;
   
