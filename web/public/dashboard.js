@@ -36,30 +36,42 @@ class FitlinkDashboard {
 
     async checkAuthStatus() {
         try {
+            console.log('Starting auth check...');
+            console.log('Window.Telegram available:', !!window.Telegram);
+            console.log('Window.Telegram.WebApp available:', !!(window.Telegram && window.Telegram.WebApp));
+            
             // Check if running in Telegram Web App
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
                 
+                console.log('Telegram WebApp initialized');
+                console.log('InitDataUnsafe:', tg.initDataUnsafe);
+                
                 // Get user data from Telegram
                 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                     const telegramUser = tg.initDataUnsafe.user;
-                    console.log('Telegram user:', telegramUser);
+                    console.log('Telegram user found:', telegramUser);
                     
                     // Authenticate with Telegram user ID
                     await this.authenticateTelegramUser(telegramUser.id, tg.initData);
                 } else {
+                    console.log('No Telegram user data in initDataUnsafe');
                     throw new Error('No Telegram user data available');
                 }
             } else {
+                console.log('Not running in Telegram WebApp, checking URL params');
                 // Fallback to URL params for non-Telegram access
                 const urlParams = new URLSearchParams(window.location.search);
                 const userId = urlParams.get('user_id');
                 const token = urlParams.get('token');
 
+                console.log('URL params - userId:', userId, 'token:', token ? 'present' : 'missing');
+
                 if (userId && token) {
                     await this.authenticateUser(userId, token);
                 } else {
+                    console.log('No valid URL params, showing auth prompt');
                     this.showAuthPrompt();
                     return;
                 }
@@ -81,11 +93,14 @@ class FitlinkDashboard {
                 .eq('telegram_id', telegramUserId)
                 .single();
 
+            console.log('Supabase user query result:', { user, error });
+
             if (error || !user) {
+                console.log('User not found in database');
                 throw new Error('User not found - please connect your devices first via the bot');
             }
 
-            console.log('User authenticated:', user);
+            console.log('User authenticated successfully:', user);
             this.currentUser = user;
             await this.loadHealthData();
         } catch (error) {
@@ -130,6 +145,7 @@ class FitlinkDashboard {
 
     async loadHealthData() {
         try {
+            console.log('Loading health data for user:', this.currentUser?.id);
             this.isLoading = true;
             
             // Load comprehensive health data
@@ -139,6 +155,12 @@ class FitlinkDashboard {
                 this.loadBriefingLogs()
             ]);
 
+            console.log('Health data loaded:', {
+                sleepRecords: sleepData.length,
+                activityRecords: activityData.length,
+                briefingRecords: briefLogs.length
+            });
+
             this.healthData = {
                 sleep: sleepData,
                 activities: activityData,
@@ -146,6 +168,7 @@ class FitlinkDashboard {
                 summary: await this.generateHealthSummary(sleepData, activityData)
             };
 
+            console.log('Rendering dashboard with health data:', this.healthData);
             this.renderDashboard();
         } catch (error) {
             console.error('Failed to load health data:', error);
@@ -526,14 +549,21 @@ class FitlinkDashboard {
 
     renderDashboard() {
         const dashboard = document.getElementById('dashboard-content');
-        if (!dashboard) return;
+        if (!dashboard) {
+            console.error('Dashboard content element not found');
+            return;
+        }
+
+        console.log('Rendering dashboard with health data:', this.healthData);
 
         if (!this.healthData || (!this.healthData.sleep.length && !this.healthData.activities.length)) {
+            console.log('No health data available, showing no-data state');
             this.showNoDataState();
             return;
         }
 
         const { summary } = this.healthData;
+        console.log('Rendering dashboard sections with summary:', summary);
         
         dashboard.innerHTML = `
             ${this.renderStatusOverview(summary)}
@@ -543,6 +573,8 @@ class FitlinkDashboard {
             ${this.renderIntegrationStatus()}
             ${this.renderFeedbackSection()}
         `;
+        
+        console.log('Dashboard rendered successfully');
     }
 
     renderStatusOverview(summary) {
