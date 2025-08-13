@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import type { TelegramUpdate, TelegramMessage, User } from "../types.ts";
+import type { TelegramUpdate, TelegramMessage, TelegramWebAppData, User } from "../types.ts";
 import { sendTelegramMessage, sendTelegramMarkdownMessage } from "./api.ts";
 import { getUserByTelegramId, createUser, updateUser } from "../database/users.ts";
 import { generateBriefing, generateDeepBriefing } from "../ai/briefing.ts";
 import { showMainMenu, showSettingsMenu, showConnectionsMenu } from "./menus.ts";
+import { handleAdminResponse, submitFeedback } from "../feedback.ts";
 
 export async function handleTelegramUpdate(
   update: TelegramUpdate,
@@ -15,6 +16,8 @@ export async function handleTelegramUpdate(
       await handleMessage(update.message, supabase, botToken);
     } else if (update.callback_query) {
       await handleCallbackQuery(update.callback_query, supabase, botToken);
+    } else if (update.web_app_data) {
+      await handleWebAppData(update.web_app_data, supabase, botToken);
     }
   } catch (error) {
     console.error("Error handling Telegram update:", error);
@@ -69,6 +72,44 @@ async function handleMessage(
   }
 }
 
+async function handleWebAppData(
+  webAppData: TelegramWebAppData,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  try {
+    const data = JSON.parse(webAppData.data);
+    console.log('Web App Data received:', data);
+    
+    if (data.action === 'feedback' && data.data) {
+      await handleWebAppFeedback(data.data, supabase, botToken);
+    }
+  } catch (error) {
+    console.error('Error parsing web app data:', error);
+  }
+}
+
+async function handleWebAppFeedback(
+  feedbackData: any,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  try {
+    // Note: Web App data doesn't include user info directly,
+    // so we need to get it from the context or find another way
+    console.log('Processing web app feedback:', feedbackData);
+    
+    // For now, we'll log it and could implement user lookup via timestamp matching
+    // or require the dashboard to include user ID in the feedback data
+    
+    // TODO: Implement proper user identification for web app feedback
+    console.warn('Web app feedback received but user identification needed');
+    
+  } catch (error) {
+    console.error('Error handling web app feedback:', error);
+  }
+}
+
 async function handleCommand(
   command: string,
   user: User,
@@ -114,6 +155,18 @@ async function handleCommand(
     
     case '/delete':
       await handleDeleteCommand(user, chatId, supabase, botToken);
+      break;
+    
+    case '/feedback':
+      await handleFeedbackCommand(user, chatId, supabase, botToken);
+      break;
+    
+    // Admin commands for feedback responses
+    case '/reply':
+    case '/resolve':
+    case '/priority':
+      const adminResult = await handleAdminResponse(user.telegram_id, cmd, args, supabase, botToken);
+      await sendTelegramMessage(botToken, chatId, adminResult.message);
       break;
     
     default:
@@ -459,6 +512,7 @@ async function handleHelpCommand(
 • /deepbrief - Deep health analysis (30-day trends)
 • /dashboard - Access your web analytics dashboard
 • /settings - Manage connections and preferences
+• /feedback - Send feedback to our team
 • /pause [days] - Pause daily briefings (default: 7 days)
 • /resume - Resume daily briefings
 • /help - Show this help message
@@ -584,11 +638,24 @@ async function handleTextInput(
     return;
   }
 
+  // Check if user is in feedback mode
+  if (user.conversation_state === 'awaiting_feedback') {
+    await handleFeedbackSubmission(text, user, chatId, supabase, botToken);
+    return;
+  }
+
+  // Auto-detect feedback messages
+  if (isFeedbackMessage(text)) {
+    const feedbackType = classifyFeedbackType(text);
+    await handleAutoFeedback(text, feedbackType, user, chatId, supabase, botToken);
+    return;
+  }
+
   // Default response for unrecognized text
   await sendTelegramMessage(
     botToken,
     chatId,
-    "I didn't understand that. Type /help to see what I can do! 🤖"
+    "I didn't understand that. Type /help to see what I can do! 🤖\n\nOr type /feedback to send us your thoughts!"
   );
 }
 
@@ -638,6 +705,10 @@ async function handleCallbackQuery(
     case 'feedback_positive':
     case 'feedback_negative':
       await handleFeedback(data === 'feedback_positive' ? 1 : -1, user, supabase, botToken, chatId);
+      break;
+    
+    case 'feedback':
+      await handleFeedbackCommand(user, chatId, supabase, botToken);
       break;
     
     case 'dashboard_deep':
@@ -1010,4 +1081,166 @@ async function handleOAuthStart(
       ]]
     }
   );
+}
+
+// Feedback handling functions
+
+async function handleFeedbackCommand(
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  await updateUser(supabase, user.id, {
+    conversation_state: 'awaiting_feedback'
+  });
+
+  const message = `💬 **Send Feedback**
+
+What would you like to tell us? You can:
+• Report a bug or issue
+• Request a new feature  
+• Share general feedback
+• Ask a question
+• Give us a compliment!
+
+Just type your message and I'll forward it to our team. We read every message and will respond if needed.
+
+_Type /cancel to exit feedback mode._`;
+
+  await sendTelegramMarkdownMessage(botToken, chatId, message);
+}
+
+async function handleFeedbackSubmission(
+  text: string,
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  if (text.toLowerCase() === '/cancel') {
+    await updateUser(supabase, user.id, {
+      conversation_state: null
+    });
+    await sendTelegramMessage(botToken, chatId, "Feedback cancelled. How else can I help you?");
+    return;
+  }
+
+  const feedbackType = classifyFeedbackType(text);
+  const result = await submitFeedback(
+    user.id,
+    user.telegram_id,
+    undefined, // No specific message ID in this flow
+    {
+      type: feedbackType,
+      category: 'general',
+      message: text,
+      context: { source: 'telegram_bot', command: '/feedback' }
+    },
+    supabase,
+    botToken
+  );
+
+  // Clear feedback state
+  await updateUser(supabase, user.id, {
+    conversation_state: null
+  });
+
+  if (result.success) {
+    await sendTelegramMarkdownMessage(
+      botToken,
+      chatId,
+      `✅ **Feedback Received!**
+
+Thanks for your message! We've received your feedback and our team will review it.
+
+${feedbackType === 'complaint' || feedbackType === 'bug_report' 
+  ? "We take issues seriously and will respond if we need more information." 
+  : "We really appreciate you taking the time to help us improve!"}
+
+**Feedback ID:** \`${result.feedbackId}\``,
+      {
+        inline_keyboard: [[
+          { text: "🏠 Main Menu", callback_data: "main_menu" }
+        ]]
+      }
+    );
+  } else {
+    await sendTelegramMessage(
+      botToken,
+      chatId,
+      "❌ Sorry, there was an error sending your feedback. Please try again later or contact support directly."
+    );
+  }
+}
+
+async function handleAutoFeedback(
+  text: string,
+  feedbackType: string,
+  user: User,
+  chatId: number,
+  supabase: SupabaseClient,
+  botToken: string
+): Promise<void> {
+  const result = await submitFeedback(
+    user.id,
+    user.telegram_id,
+    undefined,
+    {
+      type: feedbackType as any,
+      category: 'auto_detected',
+      message: text,
+      context: { source: 'telegram_bot', auto_detected: true }
+    },
+    supabase,
+    botToken
+  );
+
+  if (result.success) {
+    const responseMessage = feedbackType === 'complaint' 
+      ? "I understand you're having an issue. I've forwarded your message to our team and we'll look into it."
+      : "Thanks for the feedback! I've passed your message along to our team.";
+    
+    await sendTelegramMessage(
+      botToken,
+      chatId,
+      `${responseMessage}\n\nIs there anything else I can help you with right now?`
+    );
+  }
+}
+
+function isFeedbackMessage(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  const feedbackKeywords = [
+    'bug', 'error', 'issue', 'problem', 'broken', 'not working',
+    'suggestion', 'feature', 'request', 'would be nice',
+    'love', 'great', 'awesome', 'thank you', 'thanks',
+    'hate', 'terrible', 'awful', 'worst', 'sucks',
+    'slow', 'fast', 'improvement', 'better'
+  ];
+  
+  return feedbackKeywords.some(keyword => lowerText.includes(keyword)) &&
+         text.split(' ').length >= 3; // At least 3 words to avoid false positives
+}
+
+function classifyFeedbackType(text: string): string {
+  const lowerText = text.toLowerCase();
+  
+  if (lowerText.includes('bug') || lowerText.includes('error') || lowerText.includes('broken') || lowerText.includes('not working')) {
+    return 'bug_report';
+  }
+  
+  if (lowerText.includes('feature') || lowerText.includes('request') || lowerText.includes('suggestion') || lowerText.includes('would be nice')) {
+    return 'feature_request';
+  }
+  
+  if (lowerText.includes('love') || lowerText.includes('great') || lowerText.includes('awesome') || lowerText.includes('thank')) {
+    return 'compliment';
+  }
+  
+  if (lowerText.includes('hate') || lowerText.includes('terrible') || lowerText.includes('awful') || lowerText.includes('worst') || lowerText.includes('suck')) {
+    return 'complaint';
+  }
+  
+  return 'general_feedback';
 }

@@ -541,6 +541,7 @@ class FitlinkDashboard {
             ${this.renderWeeklyInsights(summary)}
             ${this.renderMicroHabits(summary)}
             ${this.renderIntegrationStatus()}
+            ${this.renderFeedbackSection()}
         `;
     }
 
@@ -906,6 +907,43 @@ class FitlinkDashboard {
         `;
     }
 
+    renderFeedbackSection() {
+        return `
+            <section class="mb-8">
+                <div class="glass-card p-8 rounded-2xl shadow-lg text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-comment-alt text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Share Your Feedback</h3>
+                    <p class="text-gray-600 mb-6">Help us improve your health analytics experience. Every suggestion counts!</p>
+                    <div class="space-y-3">
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <button onclick="this.sendFeedback('bug_report')" 
+                               class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
+                                <i class="fas fa-bug mr-2"></i>Report Bug
+                            </button>
+                            <button onclick="this.sendFeedback('feature_request')" 
+                               class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
+                                <i class="fas fa-lightbulb mr-2"></i>Request Feature
+                            </button>
+                            <button onclick="this.sendFeedback('compliment')" 
+                               class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
+                                <i class="fas fa-thumbs-up mr-2"></i>Say Thanks
+                            </button>
+                        </div>
+                        <button onclick="this.sendFeedback('general_feedback')" 
+                           class="px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-full font-semibold transition-all transform hover:scale-105">
+                            <i class="fas fa-comment mr-2"></i>General Feedback
+                        </button>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <p>Messages are sent directly to our team via Telegram</p>
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
     // Helper methods
     getStatusMessage(status, flags) {
         if (status === 'optimal') return 'All systems performing well';
@@ -931,6 +969,92 @@ class FitlinkDashboard {
             no_data: 'fa-question'
         };
         return icons[progression] || 'fa-chart-line';
+    }
+
+    async sendFeedback(type) {
+        if (!window.Telegram || !window.Telegram.WebApp) {
+            alert('Feedback can only be sent from within the Telegram Web App');
+            return;
+        }
+
+        const feedbackTypes = {
+            'bug_report': 'Report a Bug',
+            'feature_request': 'Request a Feature',
+            'compliment': 'Say Thanks',
+            'general_feedback': 'General Feedback'
+        };
+
+        const message = prompt(`${feedbackTypes[type]}:\n\nPlease describe your ${type === 'bug_report' ? 'issue' : type === 'feature_request' ? 'feature idea' : 'feedback'}:`);
+        
+        if (!message || message.trim().length < 10) {
+            if (message !== null) { // null means user cancelled
+                alert('Please provide more details (at least 10 characters)');
+            }
+            return;
+        }
+
+        try {
+            // Send feedback via Telegram Web App
+            const tg = window.Telegram.WebApp;
+            const feedbackData = {
+                type: type,
+                category: 'dashboard',
+                message: message.trim(),
+                context: {
+                    source: 'web_dashboard',
+                    user_agent: navigator.userAgent,
+                    page: 'health_analytics',
+                    timestamp: new Date().toISOString()
+                }
+            };
+
+            // Use Telegram Web App to send data back to the bot
+            tg.sendData(JSON.stringify({
+                action: 'feedback',
+                data: feedbackData
+            }));
+
+            // Show success message
+            this.showFeedbackSuccess(type);
+
+        } catch (error) {
+            console.error('Error sending feedback:', error);
+            alert('Error sending feedback. Please try again or send feedback directly in the bot.');
+        }
+    }
+
+    showFeedbackSuccess(type) {
+        const typeMessages = {
+            'bug_report': 'Bug report sent! Our team will investigate the issue.',
+            'feature_request': 'Feature request sent! We appreciate your suggestions.',
+            'compliment': 'Thanks for the kind words! We appreciate your support.',
+            'general_feedback': 'Feedback sent! Thanks for helping us improve.'
+        };
+
+        // Create a temporary success overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.innerHTML = `
+            <div class="bg-white rounded-2xl p-8 max-w-md mx-4 text-center">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-check text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Feedback Sent!</h3>
+                <p class="text-gray-600 mb-4">${typeMessages[type]}</p>
+                <button onclick="this.remove()" class="px-6 py-2 bg-green-500 text-white rounded-full font-semibold">
+                    Got it
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (overlay.parentNode) {
+                overlay.remove();
+            }
+        }, 5000);
     }
 
     showTelegramAuthPrompt() {

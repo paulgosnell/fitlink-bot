@@ -36,7 +36,10 @@ ${user.paused_until ? '⏸️ Briefings paused' : '▶️ Briefings active'}
         { text: "🔗 Connections", callback_data: "connections" },
         { text: "⚙️ Settings", callback_data: "settings" }
       ],
-      [{ text: "❓ Help", callback_data: "help" }]
+      [
+        { text: "❓ Help", callback_data: "help" },
+        { text: "💬 Feedback", callback_data: "feedback" }
+      ]
     ]
   };
 

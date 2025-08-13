@@ -193,6 +193,12 @@ export interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
+  web_app_data?: TelegramWebAppData;
+}
+
+export interface TelegramWebAppData {
+  data: string;
+  button_text: string;
 }
 
 export interface TelegramMessage {
