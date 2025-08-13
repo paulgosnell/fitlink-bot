@@ -89,11 +89,34 @@ class FitlinkDashboard {
                 }
                 
                 console.log('=== NO USER DATA IN TELEGRAM WEBAPP ===');
-                console.log('This means the WebApp is not properly receiving user context');
+                console.log('Checking URL parameters as fallback...');
+                
+                // Fallback: Check URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const userIdParam = urlParams.get('user_id');
+                
+                if (userIdParam) {
+                    console.log('Found user_id in URL:', userIdParam);
+                    await this.authenticateTelegramUser(parseInt(userIdParam), 'url_param');
+                    return;
+                }
+                
+                console.log('No user data available via WebApp or URL');
                 this.showWebAppError();
             } else {
                 console.log('=== NOT IN TELEGRAM WEBAPP ===');
-                console.log('Telegram object:', window.Telegram);
+                console.log('Checking URL parameters...');
+                
+                // Check URL parameters for direct access
+                const urlParams = new URLSearchParams(window.location.search);
+                const userIdParam = urlParams.get('user_id');
+                
+                if (userIdParam) {
+                    console.log('Found user_id in URL (direct access):', userIdParam);
+                    await this.authenticateTelegramUser(parseInt(userIdParam), 'direct_url');
+                    return;
+                }
+                
                 this.showNotLoggedIn();
             }
         } catch (error) {
