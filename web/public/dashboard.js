@@ -132,28 +132,64 @@ class FitlinkDashboard {
 
     async authenticateTelegramUser(telegramUserId, initData) {
         try {
-            console.log('Authenticating user ID:', telegramUserId);
+            console.log('=== AUTHENTICATION DEBUGGING ===');
+            console.log('Looking for telegram_id:', telegramUserId);
+            console.log('Supabase URL:', this.supabase.supabaseUrl);
             
-            // Get user data directly using telegram_id
+            // Test basic database connection
+            console.log('Testing database connection...');
+            const { data: testUsers, error: testError } = await this.supabase
+                .from('users')
+                .select('id, telegram_id, first_name')
+                .limit(3);
+                
+            console.log('Database connection test:', { testUsers, testError });
+            
+            if (testError) {
+                throw new Error(`Database connection failed: ${testError.message}`);
+            }
+            
+            // Search for your specific user
+            console.log('Searching for user with telegram_id:', telegramUserId);
             const { data: user, error } = await this.supabase
                 .from('users')
                 .select('*')
                 .eq('telegram_id', telegramUserId)
                 .single();
 
-            if (error || !user) {
-                console.log('User not found in database');
-                throw new Error('User not found');
+            console.log('=== USER QUERY RESULT ===');
+            console.log('User found:', user);
+            console.log('Error:', error);
+            console.log('Error code:', error?.code);
+            console.log('Error message:', error?.message);
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    throw new Error('No user found with telegram_id ' + telegramUserId);
+                }
+                throw new Error(`Database query error: ${error.message}`);
+            }
+            
+            if (!user) {
+                throw new Error('User query returned null');
             }
 
-            console.log('User authenticated:', user.first_name);
+            console.log('=== SUCCESS ===');
+            console.log('Found user:', user.first_name, '(' + user.username + ')');
+            console.log('Database ID:', user.id);
+            console.log('Has Oura:', !!user.oura_user_id);
+            
             this.currentUser = user;
             
             // Check connected providers
             await this.checkConnectedProviders();
             await this.loadHealthData();
+            
         } catch (error) {
-            console.error('Authentication failed:', error);
+            console.error('=== AUTHENTICATION FAILED ===');
+            console.error('Error type:', typeof error);
+            console.error('Error message:', error.message);
+            console.error('Full error:', error);
             throw error;
         }
     }
