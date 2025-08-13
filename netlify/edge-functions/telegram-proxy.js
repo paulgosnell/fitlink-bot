@@ -8,9 +8,9 @@ export default async (request, context) => {
     // Get the request body
     const body = await request.text();
     
-    // Hardcode the values for now to ensure they work
+    // Use the correct anon key for production
     const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4OTQ1MTcsImV4cCI6MjA3MDQ3MDUxN30.brHKkPojybFjpW9kCbPTaRsGWlCmjrGEYmpDgCStSGo';
     
     console.log('Proxy received request, body length:', body.length);
     console.log('Forwarding to:', `${SUPABASE_URL}/functions/v1/telegram-webhook`);
