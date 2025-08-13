@@ -48,12 +48,34 @@ class FitlinkDashboard {
 
     async checkAuthStatus() {
         try {
-            // Simple approach: Try to authenticate with your user ID first
-            console.log('Attempting authentication...');
-            await this.authenticateTelegramUser(5269737203, 'direct');
+            console.log('Starting authentication check...');
+            
+            // Check if running in Telegram Web App
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                
+                console.log('Telegram WebApp detected');
+                console.log('InitData available:', !!tg.initData);
+                console.log('InitDataUnsafe available:', !!tg.initDataUnsafe);
+                
+                // Try to get user from initDataUnsafe first (for development)
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    const user = tg.initDataUnsafe.user;
+                    console.log('Found user in initDataUnsafe:', user.id, user.first_name);
+                    await this.authenticateTelegramUser(user.id, tg.initData);
+                    return;
+                }
+                
+                // Fallback to your user ID for testing
+                console.log('No user in initDataUnsafe, using fallback authentication');
+                await this.authenticateTelegramUser(5269737203, 'fallback');
+            } else {
+                console.log('Not in Telegram WebApp, using direct authentication');
+                await this.authenticateTelegramUser(5269737203, 'direct');
+            }
         } catch (error) {
             console.error('Authentication failed:', error);
-            // Show no data state instead of login error - user is likely logged in but no devices connected
             this.showNoData();
         }
     }
@@ -76,6 +98,9 @@ class FitlinkDashboard {
 
             console.log('User authenticated:', user.first_name);
             this.currentUser = user;
+            
+            // Check connected providers
+            await this.checkConnectedProviders();
             await this.loadHealthData();
         } catch (error) {
             console.error('Authentication failed:', error);
@@ -135,6 +160,12 @@ class FitlinkDashboard {
                 activities: activityData,
                 summary: this.generateHealthSummary(sleepData, activityData)
             };
+            
+            console.log('Final health data summary:', {
+                sleepRecords: sleepData.length,
+                activityRecords: activityData.length,
+                hasData: sleepData.length > 0 || activityData.length > 0
+            });
 
             this.renderDashboard();
         } catch (error) {
@@ -147,34 +178,55 @@ class FitlinkDashboard {
     }
 
     async loadSleepData() {
+        console.log('Loading sleep data for user_id:', this.currentUser.id);
+        
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
+        
+        console.log('Querying oura_sleep table since:', dateFilter);
 
         const { data, error } = await this.supabase
             .from('oura_sleep')
             .select('*')
             .eq('user_id', this.currentUser.id)
-            .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
+            .gte('date', dateFilter)
             .order('date', { ascending: false })
             .limit(30);
 
-        if (error) throw error;
+        console.log('Sleep data query result:', { data, error, count: data?.length || 0 });
+        
+        if (error) {
+            console.error('Sleep data error:', error);
+            // Don't throw, just return empty array
+            return [];
+        }
         return data || [];
     }
 
     async loadActivityData() {
+        console.log('Loading activity data for user_id:', this.currentUser.id);
+        
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const dateFilter = thirtyDaysAgo.toISOString();
+        
+        console.log('Querying activities table since:', dateFilter);
 
         const { data, error } = await this.supabase
             .from('activities')
             .select('*')
             .eq('user_id', this.currentUser.id)
-            .gte('start_time', thirtyDaysAgo.toISOString())
+            .gte('start_time', dateFilter)
             .order('start_time', { ascending: false })
             .limit(50);
 
-        if (error) throw error;
+        console.log('Activity data query result:', { data, error, count: data?.length || 0 });
+        
+        if (error) {
+            console.error('Activity data error:', error);
+            return [];
+        }
         return data || [];
     }
 
@@ -188,6 +240,25 @@ class FitlinkDashboard {
 
         if (error) throw error;
         return data || [];
+    }
+    
+    async checkConnectedProviders() {
+        console.log('Checking connected providers for user_id:', this.currentUser.id);
+        
+        const { data: providers, error } = await this.supabase
+            .from('providers')
+            .select('provider, is_active, created_at')
+            .eq('user_id', this.currentUser.id);
+            
+        console.log('Connected providers:', { providers, error });
+        
+        if (providers) {
+            const activeProviders = providers.filter(p => p.is_active);
+            console.log('Active providers:', activeProviders.map(p => p.provider));
+            this.connectedProviders = activeProviders;
+        } else {
+            this.connectedProviders = [];
+        }
     }
 
     async generateHealthSummary(sleepData, activityData) {
@@ -524,8 +595,13 @@ class FitlinkDashboard {
 
         console.log('Rendering dashboard with health data:', this.healthData);
 
+        console.log('Rendering dashboard - checking data availability...');
+        console.log('Sleep records:', this.healthData?.sleep?.length || 0);
+        console.log('Activity records:', this.healthData?.activities?.length || 0);
+        console.log('Connected providers:', this.connectedProviders?.map(p => p.provider) || []);
+        
         if (!this.healthData || (!this.healthData.sleep.length && !this.healthData.activities.length)) {
-            console.log('No health data available, showing no data');
+            console.log('No health data available, showing no data state');
             this.showNoData();
             return;
         }
