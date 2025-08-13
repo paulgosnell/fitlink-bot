@@ -63,7 +63,11 @@ Oura redirects to: fitlinkbot.netlify.app/oauth-oura/callback?code=XXX
   ↓ (Netlify proxy adds Authorization header)
 umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-oura/callback
   ↓ (Exchanges code for tokens, stores in database)
-Shows success/error page
+Shows success page: "✅ Oura Ring Connected!"
+  ↓ (After 2 seconds, JavaScript redirect)
+Opens Telegram: https://t.me/the_fitlink_bot?start=status
+  ↓ (Triggers /start status command)
+Bot shows user's connection status automatically
 ```
 
 ### **3. Strava OAuth Flow** 
@@ -72,10 +76,20 @@ User clicks "Connect Strava"
   ↓
 fitlinkbot.netlify.app/oauth-strava/start?user_id=X
   ↓ (Same proxy pattern as Oura)
-Strava authorization → callback → token storage
+Strava authorization → callback → token storage → success page → redirect to Telegram
 ```
 
-### **4. Weather & Location Data**
+### **4. Seamless OAuth User Experience**
+```
+Complete OAuth Journey:
+Telegram Bot → Web OAuth → Authorization → Success Page → Back to Telegram → Status Confirmed
+```
+- **Deep Link Integration**: Success pages use `https://t.me/the_fitlink_bot?start=status`
+- **Automatic Status Check**: Bot detects `start=status` parameter and shows connection status  
+- **No Manual Steps**: User doesn't need to manually run `/status` after OAuth
+- **Immediate Confirmation**: User sees "✅ Oura Ring Connected" status in Telegram
+
+### **5. Weather & Location Data**
 - **Location Storage**: User location stored in database via Telegram bot
 - **Weather API**: OpenWeather API integration for training recommendations  
 - **Integration**: Weather data combined with health data for AI briefings
@@ -142,6 +156,8 @@ git push origin main  # GitHub Actions deploys automatically
 2. ✅ Callback URLs use Netlify proxy (adds auth for token storage)
 3. ✅ Redirect URIs in app settings must match Netlify URLs exactly
 4. ✅ Netlify proxy passes through 302 responses from Supabase
+5. ✅ Success pages automatically redirect back to Telegram with status deep link
+6. ✅ Deep link parameter triggers `/status` command showing connection status
 
 ### **For Location & Weather**
 1. ✅ User location stored via Telegram bot commands
@@ -186,5 +202,6 @@ curl https://fitlinkbot.netlify.app/oauth-strava/start?user_id=12345
 3. **Am I using the correct URLs?** → Always use fitlinkbot.netlify.app for user-facing
 4. **Will authentication work?** → Netlify proxy must add auth headers for Supabase
 5. **Am I creating Netlify Edge Functions?** → DON'T - this project doesn't use them
+6. **Does OAuth success page redirect properly?** → Should redirect to `t.me/the_fitlink_bot?start=status`
 
 **🚨 ALWAYS REFERENCE THIS DOCUMENT BEFORE ARCHITECTURAL CHANGES 🚨**
