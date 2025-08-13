@@ -39,10 +39,14 @@ export default async (request, context) => {
     
     // Otherwise return the response normally
     const responseData = await response.text();
+    const contentType = response.headers.get('Content-Type') || 'text/html';
+    console.log('Response Content-Type:', contentType);
+    
     return new Response(responseData, {
       status: response.status,
       headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'text/html'
+        'Content-Type': contentType,
+        'Cache-Control': 'no-cache'
       }
     });
     
