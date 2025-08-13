@@ -36,21 +36,61 @@ class FitlinkDashboard {
 
     async checkAuthStatus() {
         try {
-            // Check if user is authenticated via URL params (from Telegram bot)
-            const urlParams = new URLSearchParams(window.location.search);
-            const userId = urlParams.get('user_id');
-            const token = urlParams.get('token');
-
-            if (userId && token) {
-                // Verify the token and get user data
-                await this.authenticateUser(userId, token);
+            // Check if running in Telegram Web App
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                
+                // Get user data from Telegram
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    const telegramUser = tg.initDataUnsafe.user;
+                    console.log('Telegram user:', telegramUser);
+                    
+                    // Authenticate with Telegram user ID
+                    await this.authenticateTelegramUser(telegramUser.id, tg.initData);
+                } else {
+                    throw new Error('No Telegram user data available');
+                }
             } else {
-                this.showAuthPrompt();
-                return;
+                // Fallback to URL params for non-Telegram access
+                const urlParams = new URLSearchParams(window.location.search);
+                const userId = urlParams.get('user_id');
+                const token = urlParams.get('token');
+
+                if (userId && token) {
+                    await this.authenticateUser(userId, token);
+                } else {
+                    this.showAuthPrompt();
+                    return;
+                }
             }
         } catch (error) {
             console.error('Auth check failed:', error);
             this.showAuthPrompt();
+        }
+    }
+
+    async authenticateTelegramUser(telegramUserId, initData) {
+        try {
+            console.log('Authenticating Telegram user:', telegramUserId);
+            
+            // Get user data directly using telegram_id
+            const { data: user, error } = await this.supabase
+                .from('users')
+                .select('*')
+                .eq('telegram_id', telegramUserId)
+                .single();
+
+            if (error || !user) {
+                throw new Error('User not found - please connect your devices first via the bot');
+            }
+
+            console.log('User authenticated:', user);
+            this.currentUser = user;
+            await this.loadHealthData();
+        } catch (error) {
+            console.error('Telegram authentication failed:', error);
+            this.showTelegramAuthPrompt();
         }
     }
 
@@ -891,6 +931,35 @@ class FitlinkDashboard {
             no_data: 'fa-question'
         };
         return icons[progression] || 'fa-chart-line';
+    }
+
+    showTelegramAuthPrompt() {
+        const dashboard = document.getElementById('dashboard-content');
+        if (dashboard) {
+            dashboard.innerHTML = `
+                <div class="flex items-center justify-center min-h-screen">
+                    <div class="glass-card p-12 rounded-2xl shadow-lg text-center max-w-2xl">
+                        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-link text-3xl text-white"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-4">Connect Your Health Devices</h2>
+                        <p class="text-gray-600 mb-8">To view your health dashboard, you need to connect your Oura Ring and/or Strava account first.</p>
+                        <div class="space-y-4">
+                            <button onclick="window.Telegram.WebApp.close()" 
+                               class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-green-600 text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
+                                <i class="fas fa-arrow-left mr-3 text-xl"></i>
+                                Return to Bot
+                            </button>
+                            <div class="text-sm text-gray-500">
+                                <p>1. Use /connect_oura or /connect_strava in the bot</p>
+                                <p>2. Complete the device connection process</p>
+                                <p>3. Return to view your health analytics</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     showAuthPrompt() {
