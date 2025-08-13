@@ -4,10 +4,16 @@ export default async (request, context) => {
     const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4OTQ1MTcsImV4cCI6MjA3MDQ3MDUxN30.brHKkPojybFjpW9kCbPTaRsGWlCmjrGEYmpDgCStSGo';
     
+    console.log('OAuth Oura proxy hit:', url.pathname, url.search);
+    
     // Forward to Supabase OAuth function with auth header
     // Extract path after /oauth-oura
-    const supabasePath = url.pathname.replace('/oauth-oura', '');
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/oauth-oura${supabasePath}${url.search}`, {
+    const supabasePath = url.pathname.replace('/oauth-oura', '') || '/start';
+    const targetUrl = `${SUPABASE_URL}/functions/v1/oauth-oura${supabasePath}${url.search}`;
+    
+    console.log('Forwarding to:', targetUrl);
+    
+    const response = await fetch(targetUrl, {
       method: request.method,
       headers: {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -32,5 +38,5 @@ export default async (request, context) => {
 };
 
 export const config = {
-  path: "/oauth-oura/*"
+  path: ["/oauth-oura", "/oauth-oura/*"]
 };

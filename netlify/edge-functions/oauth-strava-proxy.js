@@ -32,5 +32,5 @@ export default async (request, context) => {
 };
 
 export const config = {
-  path: "/oauth-strava/*"
+  path: ["/oauth-strava", "/oauth-strava/*"]
 };
