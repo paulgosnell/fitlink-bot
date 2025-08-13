@@ -421,6 +421,12 @@ async function handleCommand(
     case "/connect_strava":
       await handleConnectStrava(chatId, userId, botToken);
       break;
+    case "/disconnect_oura":
+      await handleDisconnectOura(chatId, userId, supabase, botToken);
+      break;
+    case "/disconnect_strava":
+      await handleDisconnectStrava(chatId, userId, supabase, botToken);
+      break;
     case "/briefing":
       await handleBriefingCommand(chatId, userId, supabase, botToken);
       break;
@@ -443,7 +449,9 @@ I help you track your health data and provide AI-powered insights from Claude.
 
 *🔧 Setup Commands:*
 /connect\\_oura - Connect your Oura Ring
-/connect\\_strava - Connect your Strava account  
+/connect\\_strava - Connect your Strava account
+/disconnect\\_oura - Disconnect your Oura Ring  
+/disconnect\\_strava - Disconnect your Strava account
 /status - Check your connected devices
 
 *🧠 AI Features:*
@@ -1027,15 +1035,34 @@ async function handleStatusCommand(
 
     const connectedProviders = tokens?.map(t => t.provider) || [];
     
-    const ouraStatus = connectedProviders.includes("oura") ? "✅ Connected" : "❌ Not connected";
-    const stravaStatus = connectedProviders.includes("strava") ? "✅ Connected" : "❌ Not connected";
+    const ouraConnected = connectedProviders.includes("oura");
+    const stravaConnected = connectedProviders.includes("strava");
+    
+    const ouraStatus = ouraConnected ? "✅ Connected" : "❌ Not connected";
+    const stravaStatus = stravaConnected ? "✅ Connected" : "❌ Not connected";
+
+    // Generate appropriate action messages based on connection status
+    let actionMessages = [];
+    
+    if (!ouraConnected) {
+      actionMessages.push("• Use /connect\\_oura to link your Oura Ring");
+    } else {
+      actionMessages.push("• Use /disconnect\\_oura to unlink your Oura Ring");
+    }
+    
+    if (!stravaConnected) {
+      actionMessages.push("• Use /connect\\_strava to link your Strava account");
+    } else {
+      actionMessages.push("• Use /disconnect\\_strava to unlink your Strava account");
+    }
 
     const message = `📱 *Device Status*
 
 🟢 **Oura Ring:** ${ouraStatus}
 🔴 **Strava:** ${stravaStatus}
 
-Use /connect\\_oura or /connect\\_strava to link your accounts.`;
+*Available Actions:*
+${actionMessages.join("\n")}`;
 
     await sendTelegramMessage(botToken, chatId, message);
     
