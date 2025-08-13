@@ -155,13 +155,14 @@ serve(async (req) => {
   if (path.endsWith('/start')) {
     const userId = url.searchParams.get('user_id');
     const clientId = Deno.env.get("OURA_CLIENT_ID");
-    const baseUrl = Deno.env.get("BASE_URL");
+    const baseUrl = "https://fitlinkbot.netlify.app"; // Use Netlify proxy for callbacks
     
     if (userId && clientId) {
       const state = `${userId}_${crypto.randomUUID()}`;
       const redirectUri = `${baseUrl}/oauth-oura/callback`;
       const ouraAuthUrl = `https://cloud.ouraring.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=email personal daily&state=${state}`;
       
+      console.log('Redirecting to Oura OAuth:', ouraAuthUrl);
       return Response.redirect(ouraAuthUrl);
     }
   }
