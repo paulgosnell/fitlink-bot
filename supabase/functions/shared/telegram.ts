@@ -86,7 +86,9 @@ function isHealthRelated(text: string): boolean {
 async function setUserState(userId: number, state: string, supabase: any) {
   const expiresAt = new Date(Date.now() + 600000); // 10 minutes from now
   
-  await supabase
+  console.log(`Setting user ${userId} state to: ${state}, expires: ${expiresAt.toISOString()}`);
+  
+  const { error } = await supabase
     .from("users")
     .update({ 
       conversation_state: state,
@@ -94,33 +96,59 @@ async function setUserState(userId: number, state: string, supabase: any) {
       updated_at: new Date().toISOString()
     })
     .eq("telegram_id", userId);
+    
+  if (error) {
+    console.error(`Error setting user state for ${userId}:`, error);
+  } else {
+    console.log(`Successfully set user ${userId} state to: ${state}`);
+  }
 }
 
 async function getUserState(userId: number, supabase: any): Promise<string | null> {
-  const { data: user } = await supabase
-    .from("users")
-    .select("conversation_state, state_expires_at")
-    .eq("telegram_id", userId)
-    .single();
-  
-  if (!user || !user.conversation_state || !user.state_expires_at) return null;
-  
-  // Check if state has expired (10 minutes)
-  const expiresAt = new Date(user.state_expires_at);
-  if (Date.now() > expiresAt.getTime()) {
-    // Clear expired state
-    await supabase
+  try {
+    const { data: user, error } = await supabase
       .from("users")
-      .update({ 
-        conversation_state: null,
-        state_expires_at: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq("telegram_id", userId);
+      .select("conversation_state, state_expires_at")
+      .eq("telegram_id", userId)
+      .single();
+    
+    if (error) {
+      console.error(`Error fetching user state for ${userId}:`, error);
+      return null;
+    }
+    
+    if (!user) {
+      console.log(`No user found for telegram_id ${userId}`);
+      return null;
+    }
+    
+    console.log(`User ${userId} state: ${user.conversation_state}, expires: ${user.state_expires_at}`);
+    
+    if (!user.conversation_state) return null;
+    
+    // Check if state has expired (10 minutes)
+    if (user.state_expires_at) {
+      const expiresAt = new Date(user.state_expires_at);
+      if (Date.now() > expiresAt.getTime()) {
+        console.log(`State expired for user ${userId}, clearing`);
+        // Clear expired state
+        await supabase
+          .from("users")
+          .update({ 
+            conversation_state: null,
+            state_expires_at: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("telegram_id", userId);
+        return null;
+      }
+    }
+    
+    return user.conversation_state;
+  } catch (error) {
+    console.error(`Exception in getUserState for ${userId}:`, error);
     return null;
   }
-  
-  return user.conversation_state;
 }
 
 async function clearUserState(userId: number, supabase: any) {
@@ -135,17 +163,25 @@ async function clearUserState(userId: number, supabase: any) {
     .eq("telegram_id", userId);
 }
 
-function setDetectedQuestion(userId: number, question: string) {
-  // For now, store in memory. In production, you might want to store in database
-  detectedQuestions.set(userId, question);
+async function setDetectedQuestion(userId: number, question: string, supabase: any) {
+  await supabase
+    .from("users")
+    .update({ 
+      detected_question: question,
+      updated_at: new Date().toISOString()
+    })
+    .eq("telegram_id", userId);
 }
 
-function getDetectedQuestion(userId: number): string | null {
-  return detectedQuestions.get(userId) || null;
+async function getDetectedQuestion(userId: number, supabase: any): Promise<string | null> {
+  const { data: user } = await supabase
+    .from("users")
+    .select("detected_question")
+    .eq("telegram_id", userId)
+    .single();
+  
+  return user?.detected_question || null;
 }
-
-// Memory storage for detected questions (temporary)
-const detectedQuestions = new Map<number, string>();
 
 export async function handleTelegramUpdate(
   update: TelegramUpdate,
@@ -202,7 +238,7 @@ export async function handleTelegramUpdate(
       await handleGoalInput(text, chatId, userId, supabase, botToken);
     } else if (isHealthRelated(text)) {
       // Detected health-related message - offer AI assistance (only if not already in a health session)
-      await offerHealthAssistance(text, chatId, userId, botToken);
+      await offerHealthAssistance(text, chatId, userId, supabase, botToken);
     } else {
       // Regular message - simple response
       const keyboard = {
@@ -311,11 +347,14 @@ async function handleCallbackQuery(
       
     case "process_detected_question":
       // Process the previously detected health question directly
-      const detectedQuestion = getDetectedQuestion(userId);
+      const detectedQuestion = await getDetectedQuestion(userId, supabase);
       if (detectedQuestion) {
         await handleHealthQuestion(detectedQuestion, chatId, userId, supabase, botToken);
         // Clear the stored question
-        detectedQuestions.delete(userId);
+        await supabase
+          .from("users")
+          .update({ detected_question: null, updated_at: new Date().toISOString() })
+          .eq("telegram_id", userId);
       } else {
         await sendTelegramMessage(botToken, chatId, "❌ Sorry, I couldn't find your previous question. Please ask again.");
       }
@@ -327,10 +366,11 @@ async function offerHealthAssistance(
   text: string,
   chatId: number,
   userId: number,
+  supabase: any,
   botToken: string
 ): Promise<void> {
   // Store the detected question for later processing
-  setDetectedQuestion(userId, text);
+  await setDetectedQuestion(userId, text, supabase);
   
   const keyboard = {
     inline_keyboard: [[
