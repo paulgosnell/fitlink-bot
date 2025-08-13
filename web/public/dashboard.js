@@ -15,13 +15,17 @@ class FitlinkDashboard {
     }
 
     async init() {
+        console.log('Dashboard init started');
         this.showLoading();
         await this.checkAuthStatus();
-        await this.setupUI();
+        // setupUI was called but not defined - removing it
+        console.log('Dashboard init completed');
     }
 
     showLoading() {
+        console.log('showLoading called');
         const dashboard = document.getElementById('dashboard-content');
+        console.log('Dashboard element found:', !!dashboard);
         if (dashboard) {
             dashboard.innerHTML = `
                 <div class="flex items-center justify-center min-h-screen">
@@ -31,6 +35,9 @@ class FitlinkDashboard {
                     </div>
                 </div>
             `;
+            console.log('Loading spinner set');
+        } else {
+            console.error('Dashboard content element not found!');
         }
     }
 
@@ -1353,9 +1360,29 @@ class FitlinkDashboard {
 
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
+    console.log('dashboard-content element exists:', !!document.getElementById('dashboard-content'));
+    
     const dashboard = new FitlinkDashboard();
-    dashboard.init();
+    window.dashboard = dashboard; // Make available for debugging
+    
+    // Add a small delay to ensure Telegram WebApp is ready
+    setTimeout(() => {
+        console.log('Starting dashboard initialization...');
+        dashboard.init();
+    }, 100);
 });
 
-// Make dashboard globally available for debugging
+// Also try initialization on window load as backup
+window.addEventListener('load', () => {
+    console.log('Window loaded');
+    if (!window.dashboard) {
+        console.log('Dashboard not initialized yet, initializing now...');
+        const dashboard = new FitlinkDashboard();
+        window.dashboard = dashboard;
+        dashboard.init();
+    }
+});
+
+// Make dashboard class globally available for debugging
 window.FitlinkDashboard = FitlinkDashboard;
