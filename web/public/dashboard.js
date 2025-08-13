@@ -15,11 +15,16 @@ class FitlinkDashboard {
     }
 
     async init() {
-        console.log('Dashboard init started');
+        console.log('=== DASHBOARD INIT STARTED ===');
+        console.log('Window objects available:', {
+            Telegram: !!window.Telegram,
+            TelegramWebApp: !!(window.Telegram?.WebApp),
+            location: window.location.href
+        });
+        
         this.showLoading();
         await this.checkAuthStatus();
-        // setupUI was called but not defined - removing it
-        console.log('Dashboard init completed');
+        console.log('=== DASHBOARD INIT COMPLETED ===');
     }
 
     showLoading() {
@@ -1137,16 +1142,22 @@ class FitlinkDashboard {
                     </div>
                     <h2 class="text-xl font-bold text-gray-800 mb-3">Authentication Failed</h2>
                     <p class="text-gray-600 text-sm mb-4">Check browser console for detailed error information.</p>
-                    <button onclick="window.dashboard.debugAuth()" 
-                       class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm mr-2">
-                        <i class="fas fa-bug mr-1"></i>
-                        Debug
-                    </button>
-                    <button onclick="window.location.href='https://t.me/the_fitlink_bot'" 
-                       class="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm">
-                        <i class="fab fa-telegram-plane mr-1"></i>
-                        Go to Bot
-                    </button>
+                    <div class="space-x-2">
+                        <button onclick="console.log('=== MANUAL DEBUG ===', {telegram: window.Telegram, dashboard: window.dashboard, user: window.dashboard?.currentUser})" 
+                           class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-bug mr-1"></i>
+                            Debug
+                        </button>
+                        <button onclick="console.log('Console test - this button works')" 
+                           class="px-3 py-2 bg-gray-600 text-white rounded-lg text-sm">
+                            Test
+                        </button>
+                        <button onclick="window.location.href='https://t.me/the_fitlink_bot'" 
+                           class="px-3 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm">
+                            <i class="fab fa-telegram-plane mr-1"></i>
+                            Bot
+                        </button>
+                    </div>
                 </div>
             `;
         }
