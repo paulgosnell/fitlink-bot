@@ -98,13 +98,23 @@ include = [
 
 ## 🔧 DEPLOYMENT COMMANDS
 
-### 1. Deploy Netlify Proxy
+### 🚨 CRITICAL: DEPLOYMENT PROCESS
+**NETLIFY EDGE FUNCTIONS:** Deploy via GitHub Actions ONLY
 ```bash
-# Add and commit proxy files
+# Add and commit files
 git add netlify/edge-functions/telegram-proxy.js netlify.toml
 git commit -m "Add Telegram webhook proxy for Supabase auth"
-git push origin main
+git push origin main  # GitHub Actions will deploy edge functions automatically
 ```
+
+**SUPABASE FUNCTIONS:** Deploy via CLI ONLY
+```bash
+supabase functions deploy telegram-webhook --no-verify-jwt
+supabase functions deploy oauth-oura --no-verify-jwt
+```
+
+❌ **NEVER use `supabase functions deploy` for edge functions**
+❌ **NEVER use CLI for Netlify - only GitHub Actions**
 
 ### 2. Set Telegram Webhook
 ```bash
