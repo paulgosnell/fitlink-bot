@@ -1,0 +1,5 @@
+name = "oauth-test"
+verify_jwt = false
+
+[routes]
+include = ["/oauth-test/*", "/user-lookup"]
