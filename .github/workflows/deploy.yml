@@ -74,6 +74,8 @@ jobs:
         PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       run: |
         echo "🗄️ Updating database schema..."
-        supabase link --project-ref $PROJECT_REF
-        supabase db push --linked
-        echo "✅ Database schema updated successfully!"
+        echo "⚠️ Database migrations require manual execution due to authentication requirements"
+        echo "Please run the following command locally to apply the migration:"
+        echo "supabase db push"
+        echo "Migration file: supabase/migrations/20250813140514_add_conversation_state_columns.sql"
+        echo "✅ Functions deployed successfully - database migration skipped"

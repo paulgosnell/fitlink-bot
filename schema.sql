@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT,
   first_name TEXT,
   timezone TEXT DEFAULT 'UTC',
+  conversation_state TEXT,
+  state_expires_at TIMESTAMP WITH TIME ZONE,
+  detected_question TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
