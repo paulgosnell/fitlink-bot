@@ -1197,7 +1197,6 @@ class FitlinkDashboard {
             `;
         }
     }
-    }
 
     showNoDataState() {
         console.log('=== SHOWING NO DATA STATE ===');
