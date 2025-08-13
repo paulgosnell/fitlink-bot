@@ -289,6 +289,10 @@ async function handleCallbackQuery(
         "👍 Health question session ended. Use /start to see available commands."
       );
       break;
+    
+    case "show_status":
+      await handleStatusCommand(chatId, userId, supabase, botToken);
+      break;
   }
 }
 
@@ -412,7 +416,7 @@ async function handleCommand(
       if (parameter === "status") {
         await handleStatusCommand(chatId, userId, supabase, botToken);
       } else {
-        await handleStartCommand(chatId, botToken);
+        await handleStartCommand(chatId, userId, supabase, botToken);
       }
       break;
     case "/connect_oura":
@@ -442,17 +446,81 @@ async function handleCommand(
   }
 }
 
-async function handleStartCommand(chatId: number, botToken: string): Promise<void> {
-  const message = `🏃‍♂️ *Welcome to Fitlink Bot!*
+async function handleStartCommand(chatId: number, userId: number, supabase: any, botToken: string): Promise<void> {
+  try {
+    // Get user and check connected providers
+    const { data: user } = await supabase
+      .from("users")
+      .select("id")
+      .eq("telegram_id", userId)
+      .single();
+
+    let connectedProviders: string[] = [];
+    if (user) {
+      const { data: tokens } = await supabase
+        .from("providers")
+        .select("provider")
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+      
+      connectedProviders = tokens?.map(t => t.provider) || [];
+    }
+
+    const ouraConnected = connectedProviders.includes("oura");
+    const stravaConnected = connectedProviders.includes("strava");
+    const totalConnections = connectedProviders.length;
+
+    // Generate personalized welcome message based on connections
+    let welcomeSection = "";
+    let setupSection = "";
+    
+    if (totalConnections === 0) {
+      welcomeSection = `🏃‍♂️ *Welcome to Fitlink Bot!*
 
 I help you track your health data and provide AI-powered insights from Claude.
 
-*🔧 Setup Commands:*
-/connect\\_oura - Connect your Oura Ring
-/connect\\_strava - Connect your Strava account
-/disconnect\\_oura - Disconnect your Oura Ring  
-/disconnect\\_strava - Disconnect your Strava account
-/status - Check your connected devices
+*🚀 Get Started:*
+Connect your devices below to unlock personalized health insights!`;
+      
+      setupSection = `*🔧 Available Connections:*
+• 🟢 Oura Ring - Sleep, HRV, readiness data
+• 🔴 Strava - Activity and training data`;
+      
+    } else if (totalConnections === 1) {
+      const connectedDevice = ouraConnected ? "Oura Ring" : "Strava";
+      const missingDevice = ouraConnected ? "Strava" : "Oura Ring";
+      
+      welcomeSection = `🏃‍♂️ *Welcome back!*
+
+Great! You have your ${connectedDevice} connected. 
+
+*🔗 Complete Your Setup:*
+Connect your ${missingDevice} for even better insights combining sleep and activity data!`;
+      
+      setupSection = `*🔧 Connection Status:*
+${ouraConnected ? "✅" : "🔴"} Oura Ring ${ouraConnected ? "- Connected" : "- Available to connect"}
+${stravaConnected ? "✅" : "🔴"} Strava ${stravaConnected ? "- Connected" : "- Available to connect"}`;
+      
+    } else {
+      welcomeSection = `🏃‍♂️ *Welcome back!*
+
+Perfect! You have both Oura Ring and Strava connected.
+
+*🎯 You're all set for:*
+• Comprehensive health insights
+• AI-powered training recommendations  
+• Daily briefings combining sleep + activity data`;
+      
+      setupSection = `*🔧 Connected Devices:*
+✅ Oura Ring - Sleep, HRV, readiness data
+✅ Strava - Activity and training data
+
+Use /status to manage your connections.`;
+    }
+
+    const message = `${welcomeSection}
+
+${setupSection}
 
 *🧠 AI Features:*
 📊 Daily briefings with Claude analysis
@@ -466,17 +534,45 @@ I help you track your health data and provide AI-powered insights from Claude.
 
 Try asking: "How did I sleep?" or "Should I train today?"`;
 
-  const keyboard = {
-    inline_keyboard: [[
-      { text: "🧠 Ask Health Question", callback_data: "ask_health_question" },
-      { text: "📊 Daily Briefing", callback_data: "get_briefing" }
-    ], [
-      { text: "🟢 Connect Oura", callback_data: "connect_oura" },
-      { text: "🔴 Connect Strava", callback_data: "connect_strava" }
-    ]]
-  };
+    // Generate dynamic keyboard based on connection status
+    let connectionButtons = [];
+    
+    if (!ouraConnected) {
+      connectionButtons.push({ text: "🟢 Connect Oura", callback_data: "connect_oura" });
+    }
+    if (!stravaConnected) {
+      connectionButtons.push({ text: "🔴 Connect Strava", callback_data: "connect_strava" });
+    }
+    
+    // If both connected, show status button instead
+    if (totalConnections === 2) {
+      connectionButtons.push({ text: "📱 Device Status", callback_data: "show_status" });
+    }
 
-  await sendTelegramMessage(botToken, chatId, message, keyboard);
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: "🧠 Ask Health Question", callback_data: "ask_health_question" },
+          { text: "📊 Daily Briefing", callback_data: "get_briefing" }
+        ],
+        connectionButtons
+      ].filter(row => row.length > 0) // Remove empty rows
+    };
+
+    await sendTelegramMessage(botToken, chatId, message, keyboard);
+    
+  } catch (error) {
+    console.error("Error in handleStartCommand:", error);
+    
+    // Fallback to basic message if database query fails
+    const fallbackMessage = `🏃‍♂️ *Welcome to Fitlink Bot!*
+
+I help you track your health data and provide AI-powered insights from Claude.
+
+Use /status to check your device connections and get started!`;
+
+    await sendTelegramMessage(botToken, chatId, fallbackMessage);
+  }
 }
 
 async function handleConnectOura(chatId: number, userId: number, botToken: string): Promise<void> {
