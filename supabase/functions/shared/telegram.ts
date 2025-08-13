@@ -60,7 +60,9 @@ export async function sendTelegramMessage(
   }
 }
 
-// Conversation states - now stored in database for persistence across cold starts
+// Conversation states - stored in database for persistence across cold starts
+// Fallback to in-memory storage if database columns don't exist yet
+const userStatesFallback = new Map<number, { state: string; timestamp: number }>();
 
 
 async function setUserState(userId: number, state: string, supabase: any) {
@@ -68,19 +70,30 @@ async function setUserState(userId: number, state: string, supabase: any) {
   
   console.log(`Setting user ${userId} state to: ${state}, expires: ${expiresAt.toISOString()}`);
   
-  const { error } = await supabase
-    .from("users")
-    .update({ 
-      conversation_state: state,
-      state_expires_at: expiresAt.toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq("telegram_id", userId);
-    
-  if (error) {
-    console.error(`Error setting user state for ${userId}:`, error);
-  } else {
-    console.log(`Successfully set user ${userId} state to: ${state}`);
+  try {
+    const { error } = await supabase
+      .from("users")
+      .update({ 
+        conversation_state: state,
+        state_expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("telegram_id", userId);
+      
+    if (error) {
+      console.error(`Error setting user state for ${userId}:`, error);
+      // Check if error is due to missing column (migration not run yet)
+      if (error.message?.includes('column "conversation_state" does not exist')) {
+        console.log(`Database columns not yet created, using fallback for user ${userId}`);
+        userStatesFallback.set(userId, { state, timestamp: Date.now() });
+      }
+    } else {
+      console.log(`Successfully set user ${userId} state to: ${state}`);
+    }
+  } catch (error) {
+    console.error(`Exception in setUserState for ${userId}:`, error);
+    // Fallback to in-memory state
+    userStatesFallback.set(userId, { state, timestamp: Date.now() });
   }
 }
 
@@ -94,6 +107,20 @@ async function getUserState(userId: number, supabase: any): Promise<string | nul
     
     if (error) {
       console.error(`Error fetching user state for ${userId}:`, error);
+      // Check if error is due to missing column (migration not run yet)
+      if (error.message?.includes('column "conversation_state" does not exist')) {
+        console.log(`Database columns not yet created for user ${userId}, using fallback`);
+        const fallbackState = userStatesFallback.get(userId);
+        if (fallbackState) {
+          // Check if state has expired (10 minutes)
+          if (Date.now() - fallbackState.timestamp > 600000) {
+            userStatesFallback.delete(userId);
+            return null;
+          }
+          return fallbackState.state;
+        }
+        return null;
+      }
       return null;
     }
     
@@ -127,20 +154,37 @@ async function getUserState(userId: number, supabase: any): Promise<string | nul
     return user.conversation_state;
   } catch (error) {
     console.error(`Exception in getUserState for ${userId}:`, error);
+    // Fallback to in-memory state if database fails
+    const fallbackState = userStatesFallback.get(userId);
+    if (fallbackState) {
+      // Check if state has expired (10 minutes)
+      if (Date.now() - fallbackState.timestamp > 600000) {
+        userStatesFallback.delete(userId);
+        return null;
+      }
+      return fallbackState.state;
+    }
     return null;
   }
 }
 
 async function clearUserState(userId: number, supabase: any) {
-  await supabase
-    .from("users")
-    .update({ 
-      conversation_state: null,
-      state_expires_at: null,
-      detected_question: null,
-      updated_at: new Date().toISOString()
-    })
-    .eq("telegram_id", userId);
+  try {
+    await supabase
+      .from("users")
+      .update({ 
+        conversation_state: null,
+        state_expires_at: null,
+        detected_question: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("telegram_id", userId);
+  } catch (error) {
+    console.error(`Error clearing user state for ${userId}:`, error);
+  }
+  
+  // Also clear fallback state
+  userStatesFallback.delete(userId);
 }
 
 
