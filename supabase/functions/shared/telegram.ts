@@ -60,8 +60,7 @@ export async function sendTelegramMessage(
   }
 }
 
-// Conversation states
-const userStates = new Map<number, { state: string; timestamp: number }>();
+// Conversation states - now stored in database for persistence across cold starts
 
 // Health-related keywords for detection
 const HEALTH_KEYWORDS = [
@@ -69,31 +68,70 @@ const HEALTH_KEYWORDS = [
   'calories', 'steps', 'activity', 'fitness', 'health', 'nutrition', 'diet', 'weight',
   'stress', 'resting', 'hrv', 'readiness', 'sore', 'pain', 'fatigue', 'motivation',
   'goal', 'performance', 'endurance', 'strength', 'cardio', 'running', 'cycling',
-  'swimming', 'zone', 'tempo', 'interval', 'rest day', 'active recovery'
+  'swimming', 'zone', 'tempo', 'interval', 'rest day', 'active recovery',
+  'ill', 'sick', 'unwell', 'fever', 'cold', 'flu', 'symptoms', 'feeling', 'headache',
+  'nauseous', 'dizzy', 'weak', 'congested', 'cough', 'throat', 'body aches'
 ];
 
 function isHealthRelated(text: string): boolean {
   const lowercaseText = text.toLowerCase();
   return HEALTH_KEYWORDS.some(keyword => lowercaseText.includes(keyword)) ||
          lowercaseText.includes('how') && (lowercaseText.includes('feel') || lowercaseText.includes('sleep') || lowercaseText.includes('train')) ||
-         lowercaseText.includes('should i') || lowercaseText.includes('what') && lowercaseText.includes('recommend');
+         lowercaseText.includes('should i') || 
+         lowercaseText.includes('what') && lowercaseText.includes('recommend') ||
+         lowercaseText.includes('i feel') || lowercaseText.includes('feeling') ||
+         lowercaseText.includes('not well') || lowercaseText.includes('under the weather');
 }
 
-function setUserState(userId: number, state: string) {
-  userStates.set(userId, { state, timestamp: Date.now() });
-}
-
-function getUserState(userId: number): string | null {
-  const userState = userStates.get(userId);
-  if (!userState) return null;
+async function setUserState(userId: number, state: string, supabase: any) {
+  const expiresAt = new Date(Date.now() + 600000); // 10 minutes from now
   
-  // Clear state after 10 minutes
-  if (Date.now() - userState.timestamp > 600000) {
-    userStates.delete(userId);
+  await supabase
+    .from("users")
+    .update({ 
+      conversation_state: state,
+      state_expires_at: expiresAt.toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq("telegram_id", userId);
+}
+
+async function getUserState(userId: number, supabase: any): Promise<string | null> {
+  const { data: user } = await supabase
+    .from("users")
+    .select("conversation_state, state_expires_at")
+    .eq("telegram_id", userId)
+    .single();
+  
+  if (!user || !user.conversation_state || !user.state_expires_at) return null;
+  
+  // Check if state has expired (10 minutes)
+  const expiresAt = new Date(user.state_expires_at);
+  if (Date.now() > expiresAt.getTime()) {
+    // Clear expired state
+    await supabase
+      .from("users")
+      .update({ 
+        conversation_state: null,
+        state_expires_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("telegram_id", userId);
     return null;
   }
   
-  return userState.state;
+  return user.conversation_state;
+}
+
+async function clearUserState(userId: number, supabase: any) {
+  await supabase
+    .from("users")
+    .update({ 
+      conversation_state: null,
+      state_expires_at: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("telegram_id", userId);
 }
 
 export async function handleTelegramUpdate(
@@ -133,7 +171,7 @@ export async function handleTelegramUpdate(
     await handleCommand(text, chatId, userId, supabase, botToken);
   } else {
     // Check conversation state
-    const currentState = getUserState(userId);
+    const currentState = await getUserState(userId, supabase);
     
     if (currentState === "awaiting_health_question") {
       // User is in health Q&A mode - use AI
@@ -187,7 +225,7 @@ async function handleCallbackQuery(
 
   switch (data) {
     case "ask_health_question":
-      setUserState(userId, "awaiting_health_question");
+      await setUserState(userId, "awaiting_health_question", supabase);
       await sendTelegramMessage(
         botToken,
         chatId,
@@ -244,7 +282,7 @@ async function handleCallbackQuery(
       break;
     
     case "end_health_session":
-      userStates.delete(userId);
+      await clearUserState(userId, supabase);
       await sendTelegramMessage(
         botToken,
         chatId,
@@ -345,7 +383,7 @@ async function handleHealthQuestion(
     );
     
     // Keep user in Q&A state for follow-ups
-    setUserState(userId, "awaiting_health_question");
+    await setUserState(userId, "awaiting_health_question", supabase);
     
   } catch (error) {
     console.error("Error handling health question:", error);
@@ -540,7 +578,7 @@ async function handleSetLocation(chatId: number, userId: number, supabase: any, 
     }
 
     // Set user state to await location input
-    setUserState(userId, "awaiting_location");
+    await setUserState(userId, "awaiting_location", supabase);
     
     await sendTelegramMessage(botToken, chatId, "📍 *Set Your Location*\n\nPlease send me your city name (e.g., 'London', 'New York', 'Tokyo').\n\nThis helps me provide weather-optimized training recommendations.");
     
@@ -564,7 +602,7 @@ async function handleSetTime(chatId: number, userId: number, supabase: any, botT
     }
 
     // Set user state to await time input
-    setUserState(userId, "awaiting_time");
+    await setUserState(userId, "awaiting_time", supabase);
     
     await sendTelegramMessage(botToken, chatId, "⏰ *Set Briefing Time*\n\nPlease send me the hour (0-23) when you'd like to receive your daily briefing.\n\nFor example: '7' for 7:00 AM, '18' for 6:00 PM.");
     
@@ -588,7 +626,7 @@ async function handleSetGoal(chatId: number, userId: number, supabase: any, botT
     }
 
     // Set user state to await goal input
-    setUserState(userId, "awaiting_goal");
+    await setUserState(userId, "awaiting_goal", supabase);
     
     await sendTelegramMessage(botToken, chatId, "🎯 *Set Training Goal*\n\nPlease send me your training goal. Examples:\n\n• General fitness\n• Weight loss\n• Muscle building\n• Endurance training\n• Strength training\n• Recovery focus");
     
@@ -684,14 +722,14 @@ async function handleLocationInput(location: string, chatId: number, userId: num
       .eq("id", user.id);
 
     // Clear user state
-    userStates.delete(userId);
+    await clearUserState(userId, supabase);
 
     await sendTelegramMessage(botToken, chatId, `📍 *Location Updated!*\n\nYour location has been set to: *${location.trim()}*\n\nI'll now provide weather-optimized training recommendations based on your local conditions.`);
     
   } catch (error) {
     console.error("Error updating location:", error);
     await sendTelegramMessage(botToken, chatId, "❌ Error updating location. Please try again.");
-    userStates.delete(userId);
+    await clearUserState(userId, supabase);
   }
 }
 
@@ -725,7 +763,7 @@ async function handleTimeInput(timeInput: string, chatId: number, userId: number
       .eq("id", user.id);
 
     // Clear user state
-    userStates.delete(userId);
+    await clearUserState(userId, supabase);
 
     const timeString = hour === 0 ? "12:00 AM" : hour < 12 ? `${hour}:00 AM` : hour === 12 ? "12:00 PM" : `${hour - 12}:00 PM`;
     
@@ -734,7 +772,7 @@ async function handleTimeInput(timeInput: string, chatId: number, userId: number
   } catch (error) {
     console.error("Error updating briefing time:", error);
     await sendTelegramMessage(botToken, chatId, "❌ Error updating briefing time. Please try again.");
-    userStates.delete(userId);
+    await clearUserState(userId, supabase);
   }
 }
 
@@ -761,14 +799,14 @@ async function handleGoalInput(goal: string, chatId: number, userId: number, sup
       .eq("id", user.id);
 
     // Clear user state
-    userStates.delete(userId);
+    await clearUserState(userId, supabase);
 
     await sendTelegramMessage(botToken, chatId, `🎯 *Training Goal Updated!*\n\nYour training goal is now: *${goal.trim()}*\n\nI'll tailor your briefings and recommendations to help you achieve this goal.`);
     
   } catch (error) {
     console.error("Error updating training goal:", error);
     await sendTelegramMessage(botToken, chatId, "❌ Error updating training goal. Please try again.");
-    userStates.delete(userId);
+    await clearUserState(userId, supabase);
   }
 }
 

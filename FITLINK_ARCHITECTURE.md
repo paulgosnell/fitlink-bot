@@ -18,21 +18,20 @@ External Requests → Netlify Proxy (adds auth) → Supabase Edge Functions (bus
 
 ## 📋 SYSTEM COMPONENTS
 
-### **Layer 1: Netlify (Proxy + Static Hosting)**
+### **Layer 1: Netlify (Authentication Proxy + Static Hosting)**
 - **Purpose**: Authentication proxy + static web dashboard hosting
 - **Location**: `fitlinkbot.netlify.app`
-- **Functions**:
-  - `netlify/edge-functions/telegram-proxy.js` → Telegram webhook proxy
-  - `netlify/edge-functions/oauth-oura-proxy.js` → Oura OAuth proxy
-  - `netlify/edge-functions/oauth-strava-proxy.js` → Strava OAuth proxy
+- **Proxy Functions**: Add Authorization headers and forward to Supabase
 - **Static Files**: `web/public/` → Web dashboard
+- **⚠️ NOTE**: NO Netlify Edge Functions exist in this project - it's pure proxy/static hosting
 
-### **Layer 2: Supabase Edge Functions (Business Logic)**
-- **Purpose**: All bot logic, OAuth processing, data operations
+### **Layer 2: Supabase Edge Functions (All Business Logic)**
+- **Purpose**: ALL bot logic, OAuth processing, data operations
 - **Location**: `umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/`
+- **Runtime**: Deno with TypeScript
 - **Functions**:
   - `telegram-webhook/` → Bot message processing
-  - `oauth-oura/` → Oura OAuth flow (start + callback)
+  - `oauth-oura/` → Oura OAuth flow (start + callback)  
   - `oauth-strava/` → Strava OAuth flow (start + callback)
   - `daily-briefings/` → AI briefing generation
   - `data-sync-oura/` → Sync Oura health data
@@ -43,6 +42,7 @@ External Requests → Netlify Proxy (adds auth) → Supabase Edge Functions (bus
 ### **1. Telegram Bot Messages**
 ```
 Telegram → fitlinkbot.netlify.app/api/telegram-webhook
+         → (Netlify adds Authorization header)
          → umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/telegram-webhook
          → Bot processes message and responds
 ```
@@ -52,15 +52,15 @@ Telegram → fitlinkbot.netlify.app/api/telegram-webhook
 User clicks "Connect Oura" 
   ↓ 
 fitlinkbot.netlify.app/oauth-oura/start?user_id=X
-  ↓ (Netlify proxy adds auth header)
+  ↓ (Netlify proxy adds Authorization header)
 umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-oura/start
   ↓ (Generates OAuth URL + 302 redirect)  
-Netlify proxy passes 302 through
+Netlify proxy passes 302 through to browser
   ↓
 Browser redirects to: cloud.ouraring.com/oauth/authorize?...
   ↓ (User authorizes)
 Oura redirects to: fitlinkbot.netlify.app/oauth-oura/callback?code=XXX
-  ↓ (Netlify proxy adds auth header)
+  ↓ (Netlify proxy adds Authorization header)
 umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-oura/callback
   ↓ (Exchanges code for tokens, stores in database)
 Shows success/error page
@@ -82,26 +82,24 @@ Strava authorization → callback → token storage
 
 ## 🛠️ DEPLOYMENT PROCESS
 
-### **Netlify Edge Functions**
-```bash
-git add netlify/edge-functions/
-git commit -m "Update edge functions"
-git push origin main  # GitHub Actions deploys automatically
-```
-
-### **Supabase Edge Functions**  
+### **Supabase Edge Functions (All Backend Logic)**  
 ```bash
 git add supabase/functions/
 git commit -m "Update Supabase functions"  
 git push origin main  # GitHub Actions deploys automatically
 ```
 
-### **Static Web Files**
+### **Netlify Static Files (Web Dashboard Only)**
 ```bash
 git add web/public/
 git commit -m "Update web dashboard"
 git push origin main  # GitHub Actions deploys automatically
 ```
+
+### **⚠️ NO NETLIFY EDGE FUNCTIONS**
+- This project does NOT use Netlify Edge Functions
+- Netlify only provides proxy/static hosting
+- All function logic is in Supabase Edge Functions
 
 ## 📡 URL MAPPING
 
@@ -118,14 +116,11 @@ git push origin main  # GitHub Actions deploys automatically
 
 ## 🔐 AUTHENTICATION FLOW
 
-### **Netlify Proxy Authentication**
-```javascript
-// Each proxy adds this header before forwarding:
-headers: {
-  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-  'Content-Type': 'application/json'
-}
-```
+### **How Netlify Proxy Works**
+1. External request hits `fitlinkbot.netlify.app`
+2. Netlify proxy adds `Authorization: Bearer <anon-key>` header
+3. Request forwarded to corresponding Supabase function
+4. Supabase function processes with proper authentication
 
 ### **Required Environment Variables**
 - **Supabase**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
@@ -146,7 +141,7 @@ headers: {
 1. ✅ Start URLs use Netlify proxy (adds auth for Supabase calls)
 2. ✅ Callback URLs use Netlify proxy (adds auth for token storage)
 3. ✅ Redirect URIs in app settings must match Netlify URLs exactly
-4. ✅ Proxy uses `redirect: 'manual'` to pass through 302 responses
+4. ✅ Netlify proxy passes through 302 responses from Supabase
 
 ### **For Location & Weather**
 1. ✅ User location stored via Telegram bot commands
@@ -158,38 +153,38 @@ headers: {
 ### **Wrong URL Usage**
 - ❌ Don't use Supabase URLs directly in user-facing links
 - ❌ Don't bypass Netlify proxy for OAuth flows
-- ❌ Don't forget proxy adds auth headers
+- ❌ Don't assume direct Supabase access works (needs auth headers)
 
-### **Deployment Confusion**  
-- ❌ Don't deploy Netlify functions via CLI (use GitHub Actions only)
-- ❌ Don't deploy Supabase functions manually (use GitHub Actions)
-
-### **Architecture Misunderstanding**
+### **Architecture Confusion**  
+- ❌ Don't create Netlify Edge Functions (this project doesn't use them)
 - ❌ Don't remove Netlify proxy layer (breaks authentication)
-- ❌ Don't assume direct Supabase access works (requires auth)
-- ❌ Don't create duplicate authentication systems
+- ❌ Don't put business logic in Netlify (all logic is in Supabase)
+
+### **Deployment Mistakes**
+- ❌ Don't deploy functions via CLI during development (use GitHub Actions)
+- ❌ Don't forget that Netlify is just proxy + static files
 
 ## 🎯 HEALTH CHECK ENDPOINTS
 
 ### **Verify System Health**
 ```bash
-# Telegram webhook
+# Telegram webhook (via proxy)
 curl -X POST https://fitlinkbot.netlify.app/api/telegram-webhook -d '{"test":1}'
 
-# Oura OAuth start  
+# Oura OAuth start (via proxy)
 curl https://fitlinkbot.netlify.app/oauth-oura/start?user_id=12345
 
-# Strava OAuth start
+# Strava OAuth start (via proxy)  
 curl https://fitlinkbot.netlify.app/oauth-strava/start?user_id=12345
 ```
 
 ---
 
 ## 🔍 **BEFORE MAKING CHANGES, ASK:**
-1. **Does this change affect the proxy layer?** → Update Netlify edge functions
+1. **Does this change affect OAuth flows?** → All OAuth URLs must use Netlify proxy
 2. **Does this change affect bot logic?** → Update Supabase functions  
-3. **Does this change affect OAuth flows?** → Verify both proxy and callback URLs
-4. **Am I using the correct URLs?** → Always use fitlinkbot.netlify.app for user-facing
-5. **Will authentication work?** → Proxy must add auth headers for Supabase
+3. **Am I using the correct URLs?** → Always use fitlinkbot.netlify.app for user-facing
+4. **Will authentication work?** → Netlify proxy must add auth headers for Supabase
+5. **Am I creating Netlify Edge Functions?** → DON'T - this project doesn't use them
 
-**🚨 ALWAYS REFERENCE THIS DOCUMENT BEFORE MAJOR ARCHITECTURAL CHANGES 🚨**
+**🚨 ALWAYS REFERENCE THIS DOCUMENT BEFORE ARCHITECTURAL CHANGES 🚨**
