@@ -48,35 +48,57 @@ class FitlinkDashboard {
 
     async checkAuthStatus() {
         try {
-            console.log('Starting authentication check...');
+            console.log('=== AUTHENTICATION DEBUG ===');
+            console.log('User Agent:', navigator.userAgent);
+            console.log('Referrer:', document.referrer);
+            console.log('Location:', window.location.href);
             
             // Check if running in Telegram Web App
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
                 
-                console.log('Telegram WebApp detected');
-                console.log('InitData available:', !!tg.initData);
-                console.log('InitDataUnsafe available:', !!tg.initDataUnsafe);
+                console.log('=== TELEGRAM WEBAPP DATA ===');
+                console.log('Version:', tg.version);
+                console.log('Platform:', tg.platform);
+                console.log('ColorScheme:', tg.colorScheme);
+                console.log('IsExpanded:', tg.isExpanded);
+                console.log('ViewportHeight:', tg.viewportHeight);
+                console.log('InitData (raw):', tg.initData);
+                console.log('InitDataUnsafe (parsed):', tg.initDataUnsafe);
                 
-                // Try to get user from initDataUnsafe first (for development)
+                // Check for user data in initDataUnsafe
                 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                     const user = tg.initDataUnsafe.user;
-                    console.log('Found user in initDataUnsafe:', user.id, user.first_name);
+                    console.log('=== USER FOUND IN TELEGRAM ===');
+                    console.log('User ID:', user.id);
+                    console.log('Username:', user.username);
+                    console.log('First Name:', user.first_name);
+                    console.log('Language:', user.language_code);
+                    console.log('Is Premium:', user.is_premium);
+                    
                     await this.authenticateTelegramUser(user.id, tg.initData);
                     return;
                 }
                 
-                // Fallback to your user ID for testing
-                console.log('No user in initDataUnsafe, using fallback authentication');
-                await this.authenticateTelegramUser(5269737203, 'fallback');
+                // Check if initData contains user info but initDataUnsafe doesn't
+                if (tg.initData && !tg.initDataUnsafe) {
+                    console.log('=== INIT DATA PARSING ISSUE ===');
+                    console.log('Raw initData present but initDataUnsafe empty');
+                    console.log('This might be a WebApp configuration issue');
+                }
+                
+                console.log('=== NO USER DATA IN TELEGRAM WEBAPP ===');
+                console.log('This means the WebApp is not properly receiving user context');
+                this.showWebAppError();
             } else {
-                console.log('Not in Telegram WebApp, using direct authentication');
-                await this.authenticateTelegramUser(5269737203, 'direct');
+                console.log('=== NOT IN TELEGRAM WEBAPP ===');
+                console.log('Telegram object:', window.Telegram);
+                this.showNotLoggedIn();
             }
         } catch (error) {
-            console.error('Authentication failed:', error);
-            this.showNoData();
+            console.error('Authentication check failed:', error);
+            this.showWebAppError();
         }
     }
 
@@ -1136,21 +1158,43 @@ class FitlinkDashboard {
     }
 
     showNotLoggedIn() {
-        console.log('User not found in database');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
                 <div class="glass-card p-6 rounded-xl shadow-lg text-center">
                     <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-user-slash text-2xl text-white"></i>
+                        <i class="fas fa-exclamation-triangle text-2xl text-white"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-3">Account Not Found</h2>
-                    <p class="text-gray-600 text-sm mb-4">Please use /start in the Fitlink Bot first to create your account.</p>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">Open via Telegram Bot</h2>
+                    <p class="text-gray-600 text-sm mb-4">This dashboard must be accessed through the Fitlink Bot, not directly in a browser.</p>
                     <a href="https://t.me/the_fitlink_bot" 
                        class="inline-block px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
                         <i class="fab fa-telegram-plane mr-2"></i>
-                        Go to Bot
+                        Open in Bot
                     </a>
+                </div>
+            `;
+        }
+    }
+    
+    showWebAppError() {
+        const dashboard = document.getElementById('dashboard-content');
+        if (dashboard) {
+            dashboard.innerHTML = `
+                <div class="glass-card p-6 rounded-xl shadow-lg text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-unlink text-2xl text-white"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">WebApp Connection Issue</h2>
+                    <p class="text-gray-600 text-sm mb-4">The dashboard isn't receiving your Telegram user data. Try closing and reopening from the bot.</p>
+                    <div class="space-y-2">
+                        <a href="https://t.me/the_fitlink_bot" 
+                           class="inline-block px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
+                            <i class="fab fa-telegram-plane mr-1"></i>
+                            Return to Bot
+                        </a>
+                        <p class="text-xs text-gray-500 mt-2">Check browser console for technical details</p>
+                    </div>
                 </div>
             `;
         }
