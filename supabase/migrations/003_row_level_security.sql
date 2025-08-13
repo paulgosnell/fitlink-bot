@@ -31,6 +31,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE POLICY "Users can view own profile" ON users
     FOR SELECT USING (id = get_current_user_id() OR auth.role() = 'service_role');
 
+CREATE POLICY "Allow telegram authentication lookup" ON users
+    FOR SELECT USING (auth.role() = 'anon');
+
 CREATE POLICY "Users can update own profile" ON users
     FOR UPDATE USING (id = get_current_user_id() OR auth.role() = 'service_role');
 

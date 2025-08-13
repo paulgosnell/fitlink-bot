@@ -377,9 +377,14 @@ Root Cause: Netlify proxy not preserving Content-Type headers
 **Solution Checklist:**
 1. ✅ Verify `Content-Type: text/html; charset=UTF-8` in Supabase function
 2. ✅ Ensure Netlify proxy preserves `response.headers.get('Content-Type')`
-3. ✅ Add `Cache-Control: no-cache` to prevent browser caching
-4. ✅ Check explicit edge function mappings in `netlify.toml`
-5. ✅ Verify edge function `config.path` matches netlify.toml paths
+3. ✅ **CRITICAL**: Netlify proxy fallback Content-Type must include charset:
+   ```javascript
+   const contentType = response.headers.get('Content-Type') || 'text/html; charset=UTF-8';
+   ```
+   NOT: `|| 'text/html'` (missing charset causes browser to show raw HTML)
+4. ✅ Add `Cache-Control: no-cache` to prevent browser caching
+5. ✅ Check explicit edge function mappings in `netlify.toml`
+6. ✅ Verify edge function `config.path` matches netlify.toml paths
 
 **Debug Steps:**
 ```bash
