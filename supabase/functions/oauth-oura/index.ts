@@ -21,13 +21,18 @@ serve(async (req) => {
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
     
+    console.log('OAuth callback received:', { code: code?.substring(0, 10) + '...', state });
+    
     if (code && state) {
       try {
         // Parse state to get user_id
         const [userId, _] = state.split('_');
+        console.log('Parsed user ID:', userId);
         
         // Exchange code for tokens
+        console.log('Exchanging code for tokens...');
         const tokens = await exchangeCodeForTokens(code);
+        console.log('Token exchange successful:', { user_id: tokens.user_id });
         
         // Get user from database
         const supabase = createClient(
@@ -35,12 +40,16 @@ serve(async (req) => {
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
         );
         
+        console.log('Looking up user with Telegram ID:', userId);
         const user = await getUserByTelegramId(supabase, parseInt(userId));
         if (!user) {
+          console.error('User not found for Telegram ID:', userId);
           throw new Error('User not found');
         }
+        console.log('User found:', { id: user.id, telegram_id: user.telegram_id });
 
         // Store tokens in database
+        console.log('Storing tokens in database...');
         await createOrUpdateProvider(supabase, {
           user_id: user.id,
           provider: 'oura',
@@ -174,10 +183,14 @@ async function exchangeCodeForTokens(code: string) {
   const clientId = Deno.env.get('OURA_CLIENT_ID');
   const clientSecret = Deno.env.get('OURA_CLIENT_SECRET');
 
+  console.log('Token exchange with client_id:', clientId?.substring(0, 8) + '...');
+
   if (!clientId || !clientSecret) {
+    console.error('Missing Oura credentials:', { hasClientId: !!clientId, hasClientSecret: !!clientSecret });
     throw new Error('Missing Oura credentials');
   }
 
+  console.log('Making token request to Oura API...');
   const response = await fetch('https://api.ouraring.com/oauth/token', {
     method: 'POST',
     headers: {
@@ -191,13 +204,16 @@ async function exchangeCodeForTokens(code: string) {
     }),
   });
 
+  console.log('Oura API response status:', response.status);
+  
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Oura token exchange failed:', errorText);
-    throw new Error(`Failed to exchange code for tokens: ${response.status}`);
+    console.error('Oura token exchange failed:', response.status, errorText);
+    throw new Error(`Failed to exchange code for tokens: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
+  console.log('Token exchange response keys:', Object.keys(data));
   
   return {
     access_token: data.access_token,
