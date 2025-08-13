@@ -332,6 +332,14 @@ async function handleCallbackQuery(
       await handleSyncStrava(chatId, userId, supabase, botToken);
       break;
     
+    case "feedback":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "💬 **Send Feedback**\n\nType your message and I'll forward it to our team:\n• Report bugs or issues\n• Request features\n• Share suggestions\n• Give compliments!\n\nJust type your feedback below:"
+      );
+      break;
+    
     case "end_health_session":
       await clearUserState(userId, supabase);
       await sendTelegramMessage(
@@ -624,6 +632,12 @@ Try asking: "How did I sleep?" or "Should I train today?"`;
         [
           { text: "🧠 Ask Health Question", callback_data: "ask_health_question" },
           { text: "📊 Daily Briefing", callback_data: "get_briefing" }
+        ],
+        [
+          { text: "📱 View Dashboard", web_app: { url: "https://fitlinkbot.netlify.app/dashboard.html" } }
+        ],
+        [
+          { text: "💬 Feedback", callback_data: "feedback" }
         ],
         connectionButtons
       ].filter(row => row.length > 0) // Remove empty rows
