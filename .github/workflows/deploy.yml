@@ -74,5 +74,6 @@ jobs:
         PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       run: |
         echo "🗄️ Updating database schema..."
-        supabase db push --project-ref $PROJECT_REF
+        supabase link --project-ref $PROJECT_REF
+        supabase db push --linked
         echo "✅ Database schema updated successfully!"
