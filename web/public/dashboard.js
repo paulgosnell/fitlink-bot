@@ -1180,20 +1180,84 @@ class FitlinkDashboard {
     showWebAppError() {
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
+            // Get debug info
+            const tg = window.Telegram?.WebApp;
+            const debugInfo = {
+                hasTelegram: !!window.Telegram,
+                hasWebApp: !!tg,
+                version: tg?.version || 'N/A',
+                platform: tg?.platform || 'N/A',
+                hasInitData: !!tg?.initData,
+                hasInitDataUnsafe: !!tg?.initDataUnsafe,
+                hasUser: !!(tg?.initDataUnsafe?.user),
+                userId: tg?.initDataUnsafe?.user?.id || 'None',
+                userName: tg?.initDataUnsafe?.user?.first_name || 'None'
+            };
+            
             dashboard.innerHTML = `
-                <div class="glass-card p-6 rounded-xl shadow-lg text-center">
-                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-unlink text-2xl text-white"></i>
+                <div class="space-y-4">
+                    <div class="glass-card p-4 rounded-xl shadow-lg text-center">
+                        <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-bug text-white"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-gray-800 mb-2">WebApp Debug Info</h2>
+                        <p class="text-gray-600 text-sm mb-3">Connection status between Telegram and dashboard</p>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-3">WebApp Connection Issue</h2>
-                    <p class="text-gray-600 text-sm mb-4">The dashboard isn't receiving your Telegram user data. Try closing and reopening from the bot.</p>
-                    <div class="space-y-2">
+                    
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-md font-bold text-gray-800 mb-3">🔍 Technical Details</h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between">
+                                <span>Telegram Available:</span>
+                                <span class="${debugInfo.hasTelegram ? 'text-green-600' : 'text-red-600'} font-bold">
+                                    ${debugInfo.hasTelegram ? '✅ Yes' : '❌ No'}
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>WebApp Available:</span>
+                                <span class="${debugInfo.hasWebApp ? 'text-green-600' : 'text-red-600'} font-bold">
+                                    ${debugInfo.hasWebApp ? '✅ Yes' : '❌ No'}
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>WebApp Version:</span>
+                                <span class="font-mono">${debugInfo.version}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Platform:</span>
+                                <span class="font-mono">${debugInfo.platform}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Has InitData:</span>
+                                <span class="${debugInfo.hasInitData ? 'text-green-600' : 'text-red-600'} font-bold">
+                                    ${debugInfo.hasInitData ? '✅ Yes' : '❌ No'}
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Has User Data:</span>
+                                <span class="${debugInfo.hasUser ? 'text-green-600' : 'text-red-600'} font-bold">
+                                    ${debugInfo.hasUser ? '✅ Yes' : '❌ No'}
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>User ID:</span>
+                                <span class="font-mono text-blue-600">${debugInfo.userId}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>User Name:</span>
+                                <span class="font-mono text-blue-600">${debugInfo.userName}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card p-4 rounded-xl shadow-lg text-center">
+                        <h3 class="text-md font-bold text-gray-800 mb-2">🛠️ Fix Steps</h3>
+                        <p class="text-gray-600 text-xs mb-3">If User Data shows ❌ No, the WebApp isn't properly connected</p>
                         <a href="https://t.me/the_fitlink_bot" 
                            class="inline-block px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
                             <i class="fab fa-telegram-plane mr-1"></i>
                             Return to Bot
                         </a>
-                        <p class="text-xs text-gray-500 mt-2">Check browser console for technical details</p>
                     </div>
                 </div>
             `;
