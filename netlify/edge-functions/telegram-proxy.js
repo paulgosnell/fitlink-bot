@@ -8,14 +8,12 @@ export default async (request, context) => {
     // Get the request body
     const body = await request.text();
     
-    // Get Supabase URL and anon key from environment
-    const SUPABASE_URL = Deno.env.get('VITE_SUPABASE_URL') || Deno.env.get('SUPABASE_URL');
-    const SUPABASE_ANON_KEY = Deno.env.get('VITE_SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
+    // Hardcode the values for now to ensure they work
+    const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
     
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.error('Missing Supabase configuration');
-      return new Response('Configuration error', { status: 500 });
-    }
+    console.log('Proxy received request, body length:', body.length);
+    console.log('Forwarding to:', `${SUPABASE_URL}/functions/v1/telegram-webhook`);
     
     // Forward to Supabase Edge Function with auth header
     const response = await fetch(`${SUPABASE_URL}/functions/v1/telegram-webhook`, {
@@ -28,10 +26,12 @@ export default async (request, context) => {
     });
     
     // Log for debugging
-    console.log('Telegram webhook forwarded:', response.status);
+    console.log('Supabase response status:', response.status);
     
     // Return Supabase response to Telegram
     const responseData = await response.text();
+    console.log('Supabase response:', responseData.substring(0, 200));
+    
     return new Response(responseData, {
       status: response.status,
       headers: {
@@ -42,7 +42,7 @@ export default async (request, context) => {
   } catch (error) {
     console.error('Proxy error:', error);
     // Return 200 OK to prevent Telegram retries on errors
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, error: error.message }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
