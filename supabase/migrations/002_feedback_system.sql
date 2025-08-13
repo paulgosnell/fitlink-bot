@@ -75,11 +75,9 @@ CREATE TRIGGER update_admin_users_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- Insert your admin user (you'll need to replace 123456789 with your actual Telegram ID)
--- You can get your Telegram ID by messaging @userinfobot or checking your Telegram settings
--- For now using placeholder - UPDATE THIS AFTER DEPLOYMENT with your real Telegram ID
+-- Insert your admin user with actual Telegram ID
 INSERT INTO admin_users (telegram_id, first_name, role, is_active, can_receive_feedback) 
-VALUES (123456789, 'Paul', 'admin', true, true);
+VALUES (5269737203, 'Paul', 'admin', true, true);
 
 -- Sample data for testing
 COMMENT ON TABLE user_feedback IS 'Stores all user feedback with admin response capabilities';
