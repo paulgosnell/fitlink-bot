@@ -164,7 +164,7 @@ serve(async (req) => {
   if (path.endsWith('/start')) {
     const userId = url.searchParams.get('user_id');
     const clientId = Deno.env.get("OURA_CLIENT_ID");
-    const baseUrl = "https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1"; // Use direct Supabase functions
+    const baseUrl = "https://fitlinkbot.netlify.app"; // Use Netlify proxy for callbacks
     
     if (userId && clientId) {
       const state = `${userId}_${crypto.randomUUID()}`;
