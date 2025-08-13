@@ -182,6 +182,8 @@ serve(async (req) => {
 async function exchangeCodeForTokens(code: string) {
   const clientId = Deno.env.get('OURA_CLIENT_ID');
   const clientSecret = Deno.env.get('OURA_CLIENT_SECRET');
+  const baseUrl = "https://fitlinkbot.netlify.app";
+  const redirectUri = `${baseUrl}/oauth-oura/callback`;
 
   console.log('Token exchange with client_id:', clientId?.substring(0, 8) + '...');
 
@@ -199,6 +201,7 @@ async function exchangeCodeForTokens(code: string) {
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
+      redirect_uri: redirectUri,
       client_id: clientId,
       client_secret: clientSecret,
     }),
