@@ -53,17 +53,26 @@ class FitlinkDashboard {
                 tg.ready();
                 
                 console.log('Telegram WebApp initialized');
+                console.log('Full Telegram object:', window.Telegram);
+                console.log('WebApp object:', tg);
                 console.log('InitDataUnsafe:', tg.initDataUnsafe);
+                console.log('InitData raw:', tg.initData);
+                console.log('Platform:', tg.platform);
+                console.log('Version:', tg.version);
                 
                 // Get user data from Telegram
                 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                     const telegramUser = tg.initDataUnsafe.user;
                     console.log('Telegram user found:', telegramUser);
+                    console.log('User ID:', telegramUser.id);
+                    console.log('Username:', telegramUser.username);
+                    console.log('First name:', telegramUser.first_name);
                     
                     // Authenticate with Telegram user ID
                     await this.authenticateTelegramUser(telegramUser.id, tg.initData);
                 } else {
                     console.log('No Telegram user data in initDataUnsafe');
+                    console.log('Available properties on tg:', Object.keys(tg));
                     throw new Error('No Telegram user data available');
                 }
             } else {
@@ -91,27 +100,46 @@ class FitlinkDashboard {
 
     async authenticateTelegramUser(telegramUserId, initData) {
         try {
-            console.log('Authenticating Telegram user:', telegramUserId);
+            console.log('=== AUTHENTICATING TELEGRAM USER ===');
+            console.log('Telegram User ID:', telegramUserId);
+            console.log('Init Data:', initData);
+            
+            // Test Supabase connection first
+            console.log('Testing Supabase connection...');
+            console.log('Supabase client:', this.supabase);
             
             // Get user data directly using telegram_id
+            console.log('Querying users table for telegram_id:', telegramUserId);
             const { data: user, error } = await this.supabase
                 .from('users')
                 .select('*')
                 .eq('telegram_id', telegramUserId)
                 .single();
 
-            console.log('Supabase user query result:', { user, error });
+            console.log('=== SUPABASE QUERY RESULT ===');
+            console.log('User data:', user);
+            console.log('Error:', error);
+            console.log('Query successful:', !error);
 
-            if (error || !user) {
-                console.log('User not found in database');
-                throw new Error('User not found - please connect your devices first via the bot');
+            if (error) {
+                console.log('Database error details:', error.message, error.code, error.details);
+                throw new Error(`Database error: ${error.message}`);
+            }
+            
+            if (!user) {
+                console.log('No user found with telegram_id:', telegramUserId);
+                throw new Error('User not found - please use /start in the bot first');
             }
 
-            console.log('User authenticated successfully:', user);
+            console.log('=== USER AUTHENTICATION SUCCESSFUL ===');
+            console.log('User found:', user.first_name, user.username);
+            console.log('User ID (database):', user.id);
             this.currentUser = user;
             await this.loadHealthData();
         } catch (error) {
-            console.error('Telegram authentication failed:', error);
+            console.error('=== TELEGRAM AUTHENTICATION FAILED ===');
+            console.error('Error:', error.message);
+            console.error('Full error:', error);
             this.showNotLoggedIn();
         }
     }
@@ -1107,15 +1135,51 @@ class FitlinkDashboard {
                     <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-user-slash text-2xl text-white"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-3">You're Not Logged In</h2>
-                    <p class="text-gray-600 text-sm mb-4">Please access this dashboard through the Fitlink Bot to see your health data.</p>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">Authentication Failed</h2>
+                    <p class="text-gray-600 text-sm mb-4">Check browser console for detailed error information.</p>
+                    <button onclick="window.dashboard.debugAuth()" 
+                       class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm mr-2">
+                        <i class="fas fa-bug mr-1"></i>
+                        Debug
+                    </button>
                     <button onclick="window.location.href='https://t.me/the_fitlink_bot'" 
-                       class="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
-                        <i class="fab fa-telegram-plane mr-2"></i>
+                       class="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm">
+                        <i class="fab fa-telegram-plane mr-1"></i>
                         Go to Bot
                     </button>
                 </div>
             `;
+        }
+    }
+    
+    async debugAuth() {
+        console.log('=== MANUAL DEBUG AUTH ===');
+        console.log('Current user:', this.currentUser);
+        console.log('Health data:', this.healthData);
+        
+        // Test Supabase connection
+        try {
+            const { data, error } = await this.supabase.from('users').select('telegram_id, first_name').limit(5);
+            console.log('Sample users from database:', data);
+            console.log('Database connection working:', !error);
+            if (error) console.log('Database error:', error);
+        } catch (e) {
+            console.log('Database connection failed:', e);
+        }
+        
+        // Check if your user exists
+        const testUserId = prompt('Enter your Telegram user ID to test (check @userinfobot):');
+        if (testUserId) {
+            try {
+                const { data: user, error } = await this.supabase
+                    .from('users')
+                    .select('*')
+                    .eq('telegram_id', parseInt(testUserId))
+                    .single();
+                console.log(`User ${testUserId} lookup:`, { user, error });
+            } catch (e) {
+                console.log('Test lookup failed:', e);
+            }
         }
     }
 
