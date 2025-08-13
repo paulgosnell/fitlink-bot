@@ -562,9 +562,9 @@ class FitlinkDashboard {
         const config = statusConfig[overallStatus];
         
         return `
-            <section class="mb-8">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">Current Health Status</h2>
-                <div class="grid md:grid-cols-4 gap-6">
+            <section class="mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Health Status</h2>
+                <div class="grid grid-cols-2 gap-3">
                     <div class="glass-card metric-card p-6 rounded-2xl shadow-lg">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-semibold text-gray-700">Overall Health</h3>

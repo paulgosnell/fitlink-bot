@@ -62,26 +62,6 @@ export async function sendTelegramMessage(
 
 // Conversation states - now stored in database for persistence across cold starts
 
-// Health-related keywords for detection
-const HEALTH_KEYWORDS = [
-  'sleep', 'tired', 'energy', 'workout', 'exercise', 'training', 'recovery', 'heart rate',
-  'calories', 'steps', 'activity', 'fitness', 'health', 'nutrition', 'diet', 'weight',
-  'stress', 'resting', 'hrv', 'readiness', 'sore', 'pain', 'fatigue', 'motivation',
-  'goal', 'performance', 'endurance', 'strength', 'cardio', 'running', 'cycling',
-  'swimming', 'zone', 'tempo', 'interval', 'rest day', 'active recovery',
-  'ill', 'sick', 'unwell', 'fever', 'cold', 'flu', 'symptoms', 'feeling', 'headache',
-  'nauseous', 'dizzy', 'weak', 'congested', 'cough', 'throat', 'body aches'
-];
-
-function isHealthRelated(text: string): boolean {
-  const lowercaseText = text.toLowerCase();
-  return HEALTH_KEYWORDS.some(keyword => lowercaseText.includes(keyword)) ||
-         lowercaseText.includes('how') && (lowercaseText.includes('feel') || lowercaseText.includes('sleep') || lowercaseText.includes('train')) ||
-         lowercaseText.includes('should i') || 
-         lowercaseText.includes('what') && lowercaseText.includes('recommend') ||
-         lowercaseText.includes('i feel') || lowercaseText.includes('feeling') ||
-         lowercaseText.includes('not well') || lowercaseText.includes('under the weather');
-}
 
 async function setUserState(userId: number, state: string, supabase: any) {
   const expiresAt = new Date(Date.now() + 600000); // 10 minutes from now
@@ -163,25 +143,6 @@ async function clearUserState(userId: number, supabase: any) {
     .eq("telegram_id", userId);
 }
 
-async function setDetectedQuestion(userId: number, question: string, supabase: any) {
-  await supabase
-    .from("users")
-    .update({ 
-      detected_question: question,
-      updated_at: new Date().toISOString()
-    })
-    .eq("telegram_id", userId);
-}
-
-async function getDetectedQuestion(userId: number, supabase: any): Promise<string | null> {
-  const { data: user } = await supabase
-    .from("users")
-    .select("detected_question")
-    .eq("telegram_id", userId)
-    .single();
-  
-  return user?.detected_question || null;
-}
 
 export async function handleTelegramUpdate(
   update: TelegramUpdate,
@@ -227,6 +188,9 @@ export async function handleTelegramUpdate(
       // User is in health Q&A mode - use AI directly
       console.log(`Processing health question directly for user ${userId}`);
       await handleHealthQuestion(text, chatId, userId, supabase, botToken);
+    } else if (currentState === "awaiting_feedback") {
+      // User is providing feedback
+      await handleFeedbackInput(text, chatId, userId, supabase, botToken);
     } else if (currentState === "awaiting_location") {
       // User is setting location
       await handleLocationInput(text, chatId, userId, supabase, botToken);
@@ -236,9 +200,6 @@ export async function handleTelegramUpdate(
     } else if (currentState === "awaiting_goal") {
       // User is setting training goal
       await handleGoalInput(text, chatId, userId, supabase, botToken);
-    } else if (isHealthRelated(text)) {
-      // Detected health-related message - offer AI assistance (only if not already in a health session)
-      await offerHealthAssistance(text, chatId, userId, supabase, botToken);
     } else {
       // Regular message - simple response
       const keyboard = {
@@ -333,6 +294,7 @@ async function handleCallbackQuery(
       break;
     
     case "feedback":
+      await setUserState(userId, "awaiting_feedback", supabase);
       await sendTelegramMessage(
         botToken,
         chatId,
@@ -353,47 +315,9 @@ async function handleCallbackQuery(
       await handleStatusCommand(chatId, userId, supabase, botToken);
       break;
       
-    case "process_detected_question":
-      // Process the previously detected health question directly
-      const detectedQuestion = await getDetectedQuestion(userId, supabase);
-      if (detectedQuestion) {
-        await handleHealthQuestion(detectedQuestion, chatId, userId, supabase, botToken);
-        // Clear the stored question
-        await supabase
-          .from("users")
-          .update({ detected_question: null, updated_at: new Date().toISOString() })
-          .eq("telegram_id", userId);
-      } else {
-        await sendTelegramMessage(botToken, chatId, "❌ Sorry, I couldn't find your previous question. Please ask again.");
-      }
-      break;
   }
 }
 
-async function offerHealthAssistance(
-  text: string,
-  chatId: number,
-  userId: number,
-  supabase: any,
-  botToken: string
-): Promise<void> {
-  // Store the detected question for later processing
-  await setDetectedQuestion(userId, text, supabase);
-  
-  const keyboard = {
-    inline_keyboard: [[
-      { text: "🧠 Yes, get AI advice", callback_data: "process_detected_question" },
-      { text: "📊 Daily briefing instead", callback_data: "get_briefing" }
-    ]]
-  };
-  
-  await sendTelegramMessage(
-    botToken,
-    chatId,
-    `I noticed you mentioned something health-related! 🏃‍♂️\n\nWould you like me to analyze your data and provide personalized advice about: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
-    keyboard
-  );
-}
 
 async function handleHealthQuestion(
   question: string,
@@ -1001,6 +925,38 @@ async function handleGoalInput(goal: string, chatId: number, userId: number, sup
   } catch (error) {
     console.error("Error updating training goal:", error);
     await sendTelegramMessage(botToken, chatId, "❌ Error updating training goal. Please try again.");
+    await clearUserState(userId, supabase);
+  }
+}
+
+async function handleFeedbackInput(feedback: string, chatId: number, userId: number, supabase: any, botToken: string): Promise<void> {
+  try {
+    const { data: user } = await supabase
+      .from("users")
+      .select("id, first_name, username")
+      .eq("telegram_id", userId)
+      .single();
+
+    if (!user) {
+      await sendTelegramMessage(botToken, chatId, "❌ User not found. Please use /start first.");
+      return;
+    }
+
+    // Store feedback in database (you might want to add a feedback table)
+    console.log(`📋 FEEDBACK from ${user.first_name} (@${user.username}, ID: ${userId}): ${feedback}`);
+    
+    // Clear user state
+    await clearUserState(userId, supabase);
+
+    await sendTelegramMessage(
+      botToken, 
+      chatId, 
+      "✅ **Feedback Received!**\n\nThank you for your feedback! Our team will review it and use it to improve Fitlink Bot.\n\nUse /start to return to the main menu."
+    );
+    
+  } catch (error) {
+    console.error("Error handling feedback:", error);
+    await sendTelegramMessage(botToken, chatId, "❌ Error submitting feedback. Please try again.");
     await clearUserState(userId, supabase);
   }
 }
