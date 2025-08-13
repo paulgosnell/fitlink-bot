@@ -78,14 +78,14 @@ class FitlinkDashboard {
                 if (userId && token) {
                     await this.authenticateUser(userId, token);
                 } else {
-                    console.log('No valid URL params, showing auth prompt');
-                    this.showAuthPrompt();
+                    console.log('No valid URL params, showing not logged in');
+                    this.showNotLoggedIn();
                     return;
                 }
             }
         } catch (error) {
             console.error('Auth check failed:', error);
-            this.showAuthPrompt();
+            this.showNotLoggedIn();
         }
     }
 
@@ -112,7 +112,7 @@ class FitlinkDashboard {
             await this.loadHealthData();
         } catch (error) {
             console.error('Telegram authentication failed:', error);
-            this.showTelegramAuthPrompt();
+            this.showNotLoggedIn();
         }
     }
 
@@ -146,7 +146,7 @@ class FitlinkDashboard {
             await this.loadHealthData();
         } catch (error) {
             console.error('Authentication failed:', error);
-            this.showAuthPrompt();
+            this.showNotLoggedIn();
         }
     }
 
@@ -564,8 +564,8 @@ class FitlinkDashboard {
         console.log('Rendering dashboard with health data:', this.healthData);
 
         if (!this.healthData || (!this.healthData.sleep.length && !this.healthData.activities.length)) {
-            console.log('No health data available, showing no-data state');
-            this.showNoDataState();
+            console.log('No health data available, showing no data');
+            this.showNoData();
             return;
         }
 
@@ -1098,202 +1098,47 @@ class FitlinkDashboard {
         }, 5000);
     }
 
-    showTelegramAuthPrompt() {
-        console.log('=== SHOWING TELEGRAM AUTH PROMPT ===');
+    showNotLoggedIn() {
+        console.log('=== NOT LOGGED IN ===');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
-                <div class="space-y-6">
-                    <div class="glass-card p-6 rounded-xl shadow-lg text-center">
-                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-user-plus text-2xl text-white"></i>
-                        </div>
-                        <h2 class="text-xl font-bold text-gray-800 mb-3">Welcome to Fitlink!</h2>
-                        <p class="text-gray-600 text-sm mb-4">Connect your health devices to start your AI-powered wellness journey.</p>
-                        <button onclick="window.Telegram?.WebApp?.close()" 
-                           class="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
-                            <i class="fab fa-telegram-plane mr-2"></i>
-                            Set Up in Bot
-                        </button>
+                <div class="glass-card p-6 rounded-xl shadow-lg text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-user-slash text-2xl text-white"></i>
                     </div>
-                    
-                    <div class="glass-card p-4 rounded-xl shadow-lg">
-                        <h3 class="text-lg font-bold text-gray-800 mb-3">🚀 Quick Setup Guide</h3>
-                        <div class="space-y-3">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                                <p class="text-sm text-gray-700">Connect your <strong>Oura Ring</strong> for sleep & recovery data</p>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <div class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                                <p class="text-sm text-gray-700">Connect your <strong>Strava</strong> for training & activity data</p>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <div class="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                                <p class="text-sm text-gray-700">Return here to see your <strong>personalized insights</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="glass-card p-4 rounded-xl shadow-lg bg-gradient-to-br from-purple-50 to-blue-50">
-                        <div class="text-center">
-                            <h3 class="text-lg font-bold text-gray-800 mb-2">Your Health Data, Supercharged by AI</h3>
-                            <p class="text-gray-600 text-sm">Turn your wearable data into actionable insights with Claude AI analysis.</p>
-                        </div>
-                    </div>
-                    
-                    ${this.renderFeedbackSection()}
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">You're Not Logged In</h2>
+                    <p class="text-gray-600 text-sm mb-4">Please access this dashboard through the Fitlink Bot to see your health data.</p>
+                    <button onclick="window.location.href='https://t.me/the_fitlink_bot'" 
+                       class="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
+                        <i class="fab fa-telegram-plane mr-2"></i>
+                        Go to Bot
+                    </button>
                 </div>
             `;
         }
     }
 
-    showAuthPrompt() {
-        console.log('=== SHOWING AUTH PROMPT ===');
+
+    showNoData() {
+        console.log('=== NO DATA - CONNECT DEVICES ===');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
-                <div class="space-y-6">
-                    <div class="glass-card p-6 rounded-xl shadow-lg text-center">
-                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-user-plus text-2xl text-white"></i>
-                        </div>
-                        <h2 class="text-xl font-bold text-gray-800 mb-3">Welcome to Fitlink!</h2>
-                        <p class="text-gray-600 text-sm mb-4">Connect your health devices to start your AI-powered wellness journey.</p>
-                        <a href="https://t.me/the_fitlink_bot" 
-                           class="inline-block px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
-                            <i class="fab fa-telegram-plane mr-2"></i>
-                            Set Up in Bot
-                        </a>
+                <div class="glass-card p-6 rounded-xl shadow-lg text-center">
+                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-link text-2xl text-white"></i>
                     </div>
-                    
-                    <div class="glass-card p-4 rounded-xl shadow-lg">
-                        <h3 class="text-lg font-bold text-gray-800 mb-3">🚀 Quick Setup Guide</h3>
-                        <div class="space-y-3">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-                                <p class="text-sm text-gray-700">Connect your <strong>Oura Ring</strong> for sleep & recovery data</p>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <div class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-                                <p class="text-sm text-gray-700">Connect your <strong>Strava</strong> for training & activity data</p>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <div class="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                                <p class="text-sm text-gray-700">Return here to see your <strong>personalized insights</strong></p>
-                            </div>
-                        </div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">Connect Your Devices</h2>
+                    <p class="text-gray-600 text-sm mb-4">You're logged in but haven't connected your Oura Ring or Strava yet.</p>
+                    <button onclick="window.Telegram?.WebApp?.close()" 
+                       class="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
+                        <i class="fab fa-telegram-plane mr-2"></i>
+                        Connect in Bot
+                    </button>
+                    <div class="mt-4 text-xs text-gray-500">
+                        <p>Use /connect_oura or /connect_strava in the bot</p>
                     </div>
-                    
-                    <div class="glass-card p-4 rounded-xl shadow-lg bg-gradient-to-br from-purple-50 to-blue-50">
-                        <div class="text-center">
-                            <h3 class="text-lg font-bold text-gray-800 mb-2">Your Health Data, Supercharged by AI</h3>
-                            <p class="text-gray-600 text-sm">Turn your wearable data into actionable insights with Claude AI analysis.</p>
-                        </div>
-                    </div>
-                    
-                    ${this.renderFeedbackSection()}
-                </div>
-            `;
-        }
-    }
-
-    showNoDataState() {
-        console.log('=== SHOWING NO DATA STATE ===');
-        const dashboard = document.getElementById('dashboard-content');
-        if (dashboard) {
-            dashboard.innerHTML = `
-                <div class="space-y-6">
-                    <!-- Welcome Message -->
-                    <div class="glass-card p-6 rounded-xl shadow-lg text-center">
-                        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-rocket text-2xl text-white"></i>
-                        </div>
-                        <h2 class="text-xl font-bold text-gray-800 mb-3">Ready to Start Your Health Journey?</h2>
-                        <p class="text-gray-600 text-sm mb-4">Connect your devices to unlock AI-powered health insights!</p>
-                        <button onclick="window.Telegram?.WebApp?.close()" class="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold text-sm">
-                            <i class="fab fa-telegram-plane mr-2"></i>
-                            Connect Devices in Bot
-                        </button>
-                    </div>
-
-                    <!-- Preview What's Coming -->
-                    <div class="glass-card p-4 rounded-xl shadow-lg">
-                        <h3 class="text-lg font-bold text-gray-800 mb-3">🎯 What You'll Get</h3>
-                        <div class="space-y-3">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-heart text-green-600 text-sm"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 text-sm">HRV & Sleep Insights</h4>
-                                    <p class="text-gray-600 text-xs">Track recovery patterns and optimize sleep quality</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-dumbbell text-blue-600 text-sm"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 text-sm">Training Load Analysis</h4>
-                                    <p class="text-gray-600 text-xs">Smart recommendations to avoid overtraining</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-brain text-purple-600 text-sm"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-800 text-sm">AI Health Coaching</h4>
-                                    <p class="text-gray-600 text-xs">Personalized daily micro-habits and advice</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Motivational Call-to-Action -->
-                    <div class="glass-card p-4 rounded-xl shadow-lg bg-gradient-to-br from-green-50 to-blue-50">
-                        <div class="text-center">
-                            <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <i class="fas fa-chart-line text-white text-lg"></i>
-                            </div>
-                            <h3 class="text-lg font-bold text-gray-800 mb-2">Start Building Healthy Habits!</h3>
-                            <p class="text-gray-600 text-sm mb-3">Every health journey begins with a single step. Connect your devices and let AI guide your progress.</p>
-                            <div class="flex justify-center space-x-2 text-xs text-gray-500">
-                                <span class="bg-white px-2 py-1 rounded">🟢 Oura Ring</span>
-                                <span class="bg-white px-2 py-1 rounded">🔴 Strava</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Demo Health Status -->
-                    <div class="glass-card p-4 rounded-xl shadow-lg opacity-60">
-                        <h3 class="text-lg font-bold text-gray-800 mb-3">📊 Your Health Dashboard Preview</h3>
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div class="bg-gray-100 p-3 rounded-lg text-center">
-                                <div class="text-2xl font-bold text-gray-400 mb-1">--</div>
-                                <p class="text-xs text-gray-500">HRV Score</p>
-                            </div>
-                            <div class="bg-gray-100 p-3 rounded-lg text-center">
-                                <div class="text-2xl font-bold text-gray-400 mb-1">--%</div>
-                                <p class="text-xs text-gray-500">Sleep Quality</p>
-                            </div>
-                            <div class="bg-gray-100 p-3 rounded-lg text-center">
-                                <div class="text-2xl font-bold text-gray-400 mb-1">--</div>
-                                <p class="text-xs text-gray-500">Training Load</p>
-                            </div>
-                            <div class="bg-gray-100 p-3 rounded-lg text-center">
-                                <div class="text-2xl font-bold text-gray-400 mb-1">--</div>
-                                <p class="text-xs text-gray-500">Recovery</p>
-                            </div>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-xs text-gray-500 italic">Live data will appear here once you connect your devices</p>
-                        </div>
-                    </div>
-
-                    <!-- Feedback Section Still Available -->
-                    ${this.renderFeedbackSection()}
                 </div>
             `;
         }
