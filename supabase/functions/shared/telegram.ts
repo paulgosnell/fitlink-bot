@@ -234,6 +234,7 @@ export async function handleTelegramUpdate(
       await handleHealthQuestion(text, chatId, userId, supabase, botToken);
     } else if (currentState === "awaiting_feedback") {
       // User is providing feedback
+      console.log(`Processing feedback from user ${userId}: "${text}"`);
       await handleFeedbackInput(text, chatId, userId, supabase, botToken);
     } else if (currentState === "awaiting_location") {
       // User is setting location
@@ -246,6 +247,7 @@ export async function handleTelegramUpdate(
       await handleGoalInput(text, chatId, userId, supabase, botToken);
     } else {
       // Regular message - simple response
+      console.log(`No specific state for user ${userId}, showing default response`);
       const keyboard = {
         inline_keyboard: [[
           { text: "🧠 Ask Health Question", callback_data: "ask_health_question" },
@@ -338,7 +340,14 @@ async function handleCallbackQuery(
       break;
     
     case "feedback":
+      console.log(`Setting feedback state for user ${userId}`);
       await setUserState(userId, "awaiting_feedback", supabase);
+      
+      // Verify state was set correctly
+      const verifyState = await getUserState(userId, supabase);
+      console.log(`Verification: User ${userId} state is now: "${verifyState}"`);
+      
+      console.log(`Feedback state set for user ${userId}, sending prompt message`);
       await sendTelegramMessage(
         botToken,
         chatId,
