@@ -424,13 +424,11 @@ async function handleHealthQuestion(
       userQuestion: question
     });
     
-    // Provide options for follow-up
+    // Provide options for follow-up  
     const keyboard = {
       inline_keyboard: [[
         { text: "🔄 Ask another question", callback_data: "ask_health_question" },
         { text: "📊 Get daily briefing", callback_data: "get_briefing" }
-      ], [
-        { text: "✅ End session", callback_data: "end_health_session" }
       ]]
     };
 
@@ -441,8 +439,8 @@ async function handleHealthQuestion(
       keyboard
     );
     
-    // Keep user in Q&A state for follow-ups
-    await setUserState(userId, "awaiting_health_question", supabase);
+    // Clear the conversation state - let user choose next action via buttons
+    await clearUserState(userId, supabase);
     
   } catch (error) {
     console.error("Error handling health question:", error);
