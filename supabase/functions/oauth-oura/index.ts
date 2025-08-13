@@ -105,7 +105,10 @@ serve(async (req) => {
 </html>`;
       
         return new Response(html, {
-          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' }
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/html; charset=UTF-8'
+          }
         });
       } catch (error) {
         console.error('Error in Oura OAuth callback:', error);
@@ -154,7 +157,10 @@ serve(async (req) => {
 </html>`;
 
         return new Response(errorHtml, {
-          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' }
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/html; charset=UTF-8'
+          }
         });
       }
     }
