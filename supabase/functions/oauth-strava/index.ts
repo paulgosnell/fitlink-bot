@@ -26,8 +26,13 @@ serve(async (req) => {
         // Parse state to get user_id
         const [userId, _] = state.split('_');
         
+        console.log('Strava OAuth callback received:', { code: code?.substring(0, 10) + '...', state });
+        console.log('Parsed user ID:', userId);
+        
         // Exchange code for tokens
+        console.log('Exchanging code for tokens...');
         const tokens = await exchangeCodeForTokens(code);
+        console.log('Token exchange successful:', { athlete_id: tokens.athlete?.id });
         
         // Get user from database
         const supabase = createClient(
@@ -35,12 +40,16 @@ serve(async (req) => {
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
         );
         
+        console.log('Looking up user with Telegram ID:', userId);
         const user = await getUserByTelegramId(supabase, parseInt(userId));
         if (!user) {
+          console.error('User not found for Telegram ID:', userId);
           throw new Error('User not found');
         }
+        console.log('User found:', { id: user.id, telegram_id: user.telegram_id });
 
         // Store tokens in database
+        console.log('Storing tokens in database...');
         await createOrUpdateProvider(supabase, {
           user_id: user.id,
           provider: 'strava',
@@ -69,18 +78,27 @@ serve(async (req) => {
     <div class="container">
       <h1>✅ Strava Connected!</h1>
       <p>Your Strava account has been successfully connected to Fitlink Bot.</p>
-      <p class="success">You can now close this window and return to Telegram.</p>
+      <p class="success">Redirecting you back to Telegram to check your status...</p>
     </div>
-    <script> 
-      setTimeout(() => { 
-        window.close(); 
-      }, 3000); 
+    <script>
+        // Redirect to Telegram bot with /status command after 2 seconds
+        setTimeout(() => {
+            window.location.href = 'https://t.me/the_fitlink_bot?start=status';
+        }, 2000);
+        
+        // Also try to close window as fallback
+        setTimeout(() => {
+            window.close();
+        }, 3000);
     </script>
   </body>
 </html>`;
 
         return new Response(html, {
-          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' }
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/html; charset=UTF-8'
+          }
         });
       } catch (error) {
         console.error('Error in Strava OAuth callback:', error);
@@ -113,7 +131,10 @@ serve(async (req) => {
 </html>`;
 
         return new Response(errorHtml, {
-          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' }
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/html; charset=UTF-8'
+          }
         });
       }
     }
@@ -128,11 +149,13 @@ serve(async (req) => {
   if (path.endsWith('/start')) {
     const userId = url.searchParams.get('user_id');
     const clientId = Deno.env.get('STRAVA_CLIENT_ID');
-    const baseUrl = Deno.env.get('BASE_URL');
+    const baseUrl = "https://fitlinkbot.netlify.app"; // Use Netlify proxy for callbacks
 
-    if (userId && clientId && baseUrl) {
+    if (userId && clientId) {
       const state = `${userId}_${crypto.randomUUID()}`;
       const redirectUri = `${baseUrl}/oauth-strava/callback`;
+      
+      console.log('Redirecting to Strava OAuth:', { clientId: clientId?.substring(0, 8) + '...', redirectUri });
 
       const params = new URLSearchParams({
         client_id: clientId,
@@ -147,7 +170,7 @@ serve(async (req) => {
       return Response.redirect(stravaAuthUrl, 302);
     }
 
-    return new Response(JSON.stringify({ error: 'Missing STRAVA_CLIENT_ID, BASE_URL, or user_id' }), {
+    return new Response(JSON.stringify({ error: 'Missing STRAVA_CLIENT_ID or user_id' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -162,11 +185,17 @@ serve(async (req) => {
 async function exchangeCodeForTokens(code: string) {
   const clientId = Deno.env.get('STRAVA_CLIENT_ID');
   const clientSecret = Deno.env.get('STRAVA_CLIENT_SECRET');
+  const baseUrl = "https://fitlinkbot.netlify.app";
+  const redirectUri = `${baseUrl}/oauth-strava/callback`;
+
+  console.log('Token exchange with client_id:', clientId?.substring(0, 8) + '...');
 
   if (!clientId || !clientSecret) {
+    console.error('Missing Strava credentials:', { hasClientId: !!clientId, hasClientSecret: !!clientSecret });
     throw new Error('Missing Strava credentials');
   }
 
+  console.log('Making token request to Strava API...');
   const response = await fetch('https://www.strava.com/oauth/token', {
     method: 'POST',
     headers: {
@@ -180,13 +209,16 @@ async function exchangeCodeForTokens(code: string) {
     }),
   });
 
+  console.log('Strava API response status:', response.status);
+  
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Strava token exchange failed:', errorText);
-    throw new Error(`Failed to exchange code for tokens: ${response.status}`);
+    console.error('Strava token exchange failed:', response.status, errorText);
+    throw new Error(`Failed to exchange code for tokens: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
+  console.log('Token exchange response keys:', Object.keys(data));
   
   return {
     access_token: data.access_token,
