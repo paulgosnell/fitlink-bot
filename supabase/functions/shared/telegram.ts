@@ -129,10 +129,23 @@ async function clearUserState(userId: number, supabase: any) {
     .update({ 
       conversation_state: null,
       state_expires_at: null,
+      detected_question: null,
       updated_at: new Date().toISOString()
     })
     .eq("telegram_id", userId);
 }
+
+function setDetectedQuestion(userId: number, question: string) {
+  // For now, store in memory. In production, you might want to store in database
+  detectedQuestions.set(userId, question);
+}
+
+function getDetectedQuestion(userId: number): string | null {
+  return detectedQuestions.get(userId) || null;
+}
+
+// Memory storage for detected questions (temporary)
+const detectedQuestions = new Map<number, string>();
 
 export async function handleTelegramUpdate(
   update: TelegramUpdate,
@@ -172,9 +185,11 @@ export async function handleTelegramUpdate(
   } else {
     // Check conversation state
     const currentState = await getUserState(userId, supabase);
+    console.log(`User ${userId} current state: "${currentState}", message: "${text}"`);
     
     if (currentState === "awaiting_health_question") {
-      // User is in health Q&A mode - use AI
+      // User is in health Q&A mode - use AI directly
+      console.log(`Processing health question directly for user ${userId}`);
       await handleHealthQuestion(text, chatId, userId, supabase, botToken);
     } else if (currentState === "awaiting_location") {
       // User is setting location
@@ -186,7 +201,7 @@ export async function handleTelegramUpdate(
       // User is setting training goal
       await handleGoalInput(text, chatId, userId, supabase, botToken);
     } else if (isHealthRelated(text)) {
-      // Detected health-related message - offer AI assistance
+      // Detected health-related message - offer AI assistance (only if not already in a health session)
       await offerHealthAssistance(text, chatId, userId, botToken);
     } else {
       // Regular message - simple response
@@ -293,6 +308,18 @@ async function handleCallbackQuery(
     case "show_status":
       await handleStatusCommand(chatId, userId, supabase, botToken);
       break;
+      
+    case "process_detected_question":
+      // Process the previously detected health question directly
+      const detectedQuestion = getDetectedQuestion(userId);
+      if (detectedQuestion) {
+        await handleHealthQuestion(detectedQuestion, chatId, userId, supabase, botToken);
+        // Clear the stored question
+        detectedQuestions.delete(userId);
+      } else {
+        await sendTelegramMessage(botToken, chatId, "❌ Sorry, I couldn't find your previous question. Please ask again.");
+      }
+      break;
   }
 }
 
@@ -302,9 +329,12 @@ async function offerHealthAssistance(
   userId: number,
   botToken: string
 ): Promise<void> {
+  // Store the detected question for later processing
+  setDetectedQuestion(userId, text);
+  
   const keyboard = {
     inline_keyboard: [[
-      { text: "🧠 Yes, get AI advice", callback_data: "ask_health_question" },
+      { text: "🧠 Yes, get AI advice", callback_data: "process_detected_question" },
       { text: "📊 Daily briefing instead", callback_data: "get_briefing" }
     ]]
   };
