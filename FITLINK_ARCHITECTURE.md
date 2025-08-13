@@ -70,13 +70,27 @@ Opens Telegram: https://t.me/the_fitlink_bot?start=status
 Bot shows user's connection status automatically
 ```
 
-### **3. Strava OAuth Flow** 
+### **3. Strava OAuth Flow**
 ```
 User clicks "Connect Strava"
-  ↓
+  ↓ 
 fitlinkbot.netlify.app/oauth-strava/start?user_id=X
-  ↓ (Same proxy pattern as Oura)
-Strava authorization → callback → token storage → success page → redirect to Telegram
+  ↓ (Netlify proxy adds Authorization header)
+umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-strava/start
+  ↓ (Generates OAuth URL + 302 redirect)  
+Netlify proxy passes 302 through to browser
+  ↓
+Browser redirects to: www.strava.com/oauth/authorize?...
+  ↓ (User authorizes)
+Strava redirects to: fitlinkbot.netlify.app/oauth-strava/callback?code=XXX
+  ↓ (Netlify proxy adds Authorization header)
+umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-strava/callback
+  ↓ (Exchanges code for tokens, stores in database)
+Shows success page: "✅ Strava Connected!"
+  ↓ (After 2 seconds, JavaScript redirect)
+Opens Telegram: https://t.me/the_fitlink_bot?start=status
+  ↓ (Triggers /start status command)
+Bot shows user's connection status automatically
 ```
 
 ### **4. Seamless OAuth User Experience**
@@ -93,6 +107,102 @@ Telegram Bot → Web OAuth → Authorization → Success Page → Back to Telegr
 - **Location Storage**: User location stored in database via Telegram bot
 - **Weather API**: OpenWeather API integration for training recommendations  
 - **Integration**: Weather data combined with health data for AI briefings
+
+### **6. Adding New Provider Integrations (Whoop, Garmin, etc.)**
+
+#### **OAuth Integration Pattern**
+All new health/fitness providers should follow the established two-layer pattern:
+
+```
+User clicks "Connect [Provider]" 
+  ↓ 
+fitlinkbot.netlify.app/oauth-[provider]/start?user_id=X
+  ↓ (Netlify proxy adds Authorization header)
+umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-[provider]/start
+  ↓ (Generates OAuth URL + 302 redirect)  
+Netlify proxy passes 302 through to browser
+  ↓
+Browser redirects to: [provider-oauth-url]
+  ↓ (User authorizes)
+Provider redirects to: fitlinkbot.netlify.app/oauth-[provider]/callback?code=XXX
+  ↓ (Netlify proxy adds Authorization header)
+umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-[provider]/callback
+  ↓ (Exchanges code for tokens, stores in database)
+Shows success page: "✅ [Provider] Connected!"
+  ↓ (After 2 seconds, JavaScript redirect)
+Opens Telegram: https://t.me/the_fitlink_bot?start=status
+```
+
+#### **Required Components for New Providers**
+
+**1. Supabase Edge Function:** `supabase/functions/oauth-[provider]/index.ts`
+- OAuth start endpoint (generates authorization URL)
+- OAuth callback endpoint (handles token exchange)
+- Success/error HTML pages with Telegram redirect
+- Debug logging for troubleshooting
+
+**2. Database Integration:**
+- Uses existing `providers` table with provider-specific `provider` field
+- Stores encrypted OAuth tokens using shared encryption utilities
+- Links to user via `user_id` foreign key
+
+**3. Telegram Bot Commands:**
+- Add `/connect_[provider]` command to shared/telegram.ts
+- Update status command to show new provider connection
+- Follow existing button/keyboard patterns
+
+**4. Data Sync Function:** `supabase/functions/data-sync-[provider]/index.ts`
+- Fetches provider's API data using stored tokens
+- Transforms data to common schema
+- Stores in provider-specific database tables
+- Handles token refresh if needed
+
+#### **Provider-Specific Considerations**
+
+**Whoop Integration:**
+- OAuth 2.0 with scopes: `read:recovery`, `read:workout`, `read:sleep`
+- API: `https://api.prod.whoop.com/developer/v1/`
+- Data: Recovery scores, HRV, strain, sleep efficiency
+- Tables: `whoop_recovery`, `whoop_workouts`, `whoop_sleep`
+
+**Garmin Connect Integration:**
+- OAuth 1.0a (different from OAuth 2.0 pattern)
+- API: `https://apis.garmin.com/wellness-api/rest/`
+- Data: Daily activities, sleep, heart rate, stress
+- Tables: `garmin_activities`, `garmin_sleep`, `garmin_wellness`
+
+**Polar Integration:**
+- OAuth 2.0 with scopes: `accesslink.read_all`
+- API: `https://www.polar.com/accesslink-api/v3/`
+- Data: Training sessions, physical info, sleep
+- Tables: `polar_exercises`, `polar_sleep`, `polar_physical`
+
+#### **Integration Checklist**
+
+**Setup Requirements:**
+- [ ] Register developer application with provider
+- [ ] Configure redirect URI: `https://fitlinkbot.netlify.app/oauth-[provider]/callback`
+- [ ] Add client credentials to Supabase secrets
+- [ ] Create database tables for provider data
+
+**Function Development:**
+- [ ] Copy oauth-oura structure as template
+- [ ] Update provider-specific OAuth URLs and parameters
+- [ ] Implement token exchange with correct redirect_uri
+- [ ] Add provider-specific error handling
+- [ ] Test OAuth flow end-to-end
+
+**Bot Integration:**
+- [ ] Add connect command to Telegram handler
+- [ ] Update status command to include new provider
+- [ ] Create data sync function
+- [ ] Add provider to daily briefing AI prompts
+
+**Deployment:**
+- [ ] Test OAuth flow in development
+- [ ] Deploy via GitHub Actions
+- [ ] Verify production OAuth callback works
+- [ ] Test data sync and briefing integration
 
 ## 🛠️ DEPLOYMENT PROCESS
 
@@ -203,5 +313,6 @@ curl https://fitlinkbot.netlify.app/oauth-strava/start?user_id=12345
 4. **Will authentication work?** → Netlify proxy must add auth headers for Supabase
 5. **Am I creating Netlify Edge Functions?** → DON'T - this project doesn't use them
 6. **Does OAuth success page redirect properly?** → Should redirect to `t.me/the_fitlink_bot?start=status`
+7. **Adding new provider?** → Follow the established OAuth integration pattern and checklist
 
 **🚨 ALWAYS REFERENCE THIS DOCUMENT BEFORE ARCHITECTURAL CHANGES 🚨**
