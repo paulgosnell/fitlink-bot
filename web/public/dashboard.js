@@ -1092,6 +1092,7 @@ class FitlinkDashboard {
     }
 
     showTelegramAuthPrompt() {
+        console.log('=== SHOWING TELEGRAM AUTH PROMPT ===');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
@@ -1141,35 +1142,58 @@ class FitlinkDashboard {
     }
 
     showAuthPrompt() {
+        console.log('=== SHOWING AUTH PROMPT ===');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
-                <div class="flex items-center justify-center min-h-screen">
-                    <div class="glass-card p-12 rounded-2xl shadow-lg text-center max-w-2xl">
-                        <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <i class="fab fa-telegram-plane text-3xl text-white"></i>
+                <div class="space-y-6">
+                    <div class="glass-card p-6 rounded-xl shadow-lg text-center">
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-plus text-2xl text-white"></i>
                         </div>
-                        <h2 class="text-3xl font-bold text-gray-800 mb-4">Access Your Health Dashboard</h2>
-                        <p class="text-gray-600 mb-8">To view your personalized health analytics, you need to connect through the Fitlink Bot on Telegram.</p>
-                        <div class="space-y-4">
-                            <a href="https://t.me/the_fitlink_bot?start=dashboard" 
-                               class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-lg font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
-                                <i class="fab fa-telegram-plane mr-3 text-xl"></i>
-                                Connect via Telegram Bot
-                            </a>
-                            <div class="text-sm text-gray-500">
-                                <p>1. Start the bot and connect your Oura/Strava accounts</p>
-                                <p>2. The bot will provide you with a secure dashboard link</p>
-                                <p>3. Return here to view your personalized analytics</p>
+                        <h2 class="text-xl font-bold text-gray-800 mb-3">Welcome to Fitlink!</h2>
+                        <p class="text-gray-600 text-sm mb-4">Connect your health devices to start your AI-powered wellness journey.</p>
+                        <a href="https://t.me/the_fitlink_bot" 
+                           class="inline-block px-6 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold rounded-lg text-sm">
+                            <i class="fab fa-telegram-plane mr-2"></i>
+                            Set Up in Bot
+                        </a>
+                    </div>
+                    
+                    <div class="glass-card p-4 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">🚀 Quick Setup Guide</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                                <p class="text-sm text-gray-700">Connect your <strong>Oura Ring</strong> for sleep & recovery data</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                                <p class="text-sm text-gray-700">Connect your <strong>Strava</strong> for training & activity data</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                                <p class="text-sm text-gray-700">Return here to see your <strong>personalized insights</strong></p>
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="glass-card p-4 rounded-xl shadow-lg bg-gradient-to-br from-purple-50 to-blue-50">
+                        <div class="text-center">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">Your Health Data, Supercharged by AI</h3>
+                            <p class="text-gray-600 text-sm">Turn your wearable data into actionable insights with Claude AI analysis.</p>
+                        </div>
+                    </div>
+                    
+                    ${this.renderFeedbackSection()}
                 </div>
             `;
         }
     }
+    }
 
     showNoDataState() {
+        console.log('=== SHOWING NO DATA STATE ===');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
@@ -1270,6 +1294,7 @@ class FitlinkDashboard {
     }
 
     showError(message) {
+        console.log('=== SHOWING ERROR STATE ===', message);
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
