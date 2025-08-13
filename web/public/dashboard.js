@@ -78,7 +78,10 @@ class FitlinkDashboard {
                 } else {
                     console.log('No Telegram user data in initDataUnsafe');
                     console.log('Available properties on tg:', Object.keys(tg));
-                    throw new Error('No Telegram user data available');
+                    console.log('Trying manual authentication with known user ID 5269737203...');
+                    
+                    // TEMPORARY: Try with your known user ID
+                    await this.authenticateTelegramUser(5269737203, 'manual_override');
                 }
             } else {
                 console.log('Not running in Telegram WebApp, checking URL params');
@@ -1133,6 +1136,7 @@ class FitlinkDashboard {
 
     showNotLoggedIn() {
         console.log('=== NOT LOGGED IN ===');
+        console.log('Showing debug interface...');
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
             dashboard.innerHTML = `
@@ -1140,17 +1144,18 @@ class FitlinkDashboard {
                     <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-user-slash text-2xl text-white"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-3">Authentication Failed</h2>
-                    <p class="text-gray-600 text-sm mb-4">Check browser console for detailed error information.</p>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3">Authentication Issue</h2>
+                    <p class="text-gray-600 text-sm mb-4">User ID 5269737203 - Debug to see what's happening</p>
                     <div class="space-x-2">
-                        <button onclick="console.log('=== MANUAL DEBUG ===', {telegram: window.Telegram, dashboard: window.dashboard, user: window.dashboard?.currentUser})" 
+                        <button onclick="console.log('=== MANUAL DEBUG ===', {telegram: window.Telegram, telegramWebApp: window.Telegram?.WebApp, telegramUser: window.Telegram?.WebApp?.initDataUnsafe?.user, dashboard: window.dashboard, currentUser: window.dashboard?.currentUser}); window.dashboard?.testUserLookup(5269737203)" 
                            class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">
                             <i class="fas fa-bug mr-1"></i>
-                            Debug
+                            Debug User
                         </button>
-                        <button onclick="console.log('Console test - this button works')" 
-                           class="px-3 py-2 bg-gray-600 text-white rounded-lg text-sm">
-                            Test
+                        <button onclick="window.dashboard?.authenticateTelegramUser(5269737203, 'manual')" 
+                           class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm">
+                            <i class="fas fa-user mr-1"></i>
+                            Force Auth
                         </button>
                         <button onclick="window.location.href='https://t.me/the_fitlink_bot'" 
                            class="px-3 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm">
@@ -1163,34 +1168,55 @@ class FitlinkDashboard {
         }
     }
     
-    async debugAuth() {
-        console.log('=== MANUAL DEBUG AUTH ===');
-        console.log('Current user:', this.currentUser);
-        console.log('Health data:', this.healthData);
+    async testUserLookup(userId) {
+        console.log('=== TESTING USER LOOKUP ===');
+        console.log('Looking for user ID:', userId);
         
-        // Test Supabase connection
         try {
-            const { data, error } = await this.supabase.from('users').select('telegram_id, first_name').limit(5);
-            console.log('Sample users from database:', data);
-            console.log('Database connection working:', !error);
-            if (error) console.log('Database error:', error);
-        } catch (e) {
-            console.log('Database connection failed:', e);
-        }
-        
-        // Check if your user exists
-        const testUserId = prompt('Enter your Telegram user ID to test (check @userinfobot):');
-        if (testUserId) {
-            try {
-                const { data: user, error } = await this.supabase
-                    .from('users')
-                    .select('*')
-                    .eq('telegram_id', parseInt(testUserId))
-                    .single();
-                console.log(`User ${testUserId} lookup:`, { user, error });
-            } catch (e) {
-                console.log('Test lookup failed:', e);
+            // Test database connection first
+            console.log('Testing basic database connection...');
+            const { data: testData, error: testError } = await this.supabase
+                .from('users')
+                .select('telegram_id, first_name, username')
+                .limit(3);
+            
+            console.log('Database test result:', { testData, testError });
+            
+            if (testError) {
+                console.log('Database connection failed:', testError);
+                return;
             }
+            
+            // Look for specific user
+            console.log('Looking for your user...');
+            const { data: user, error } = await this.supabase
+                .from('users')
+                .select('*')
+                .eq('telegram_id', userId)
+                .single();
+                
+            console.log('=== USER LOOKUP RESULT ===');
+            console.log('User found:', !!user);
+            console.log('User data:', user);
+            console.log('Error:', error);
+            
+            if (user) {
+                console.log('SUCCESS: User exists in database!');
+                console.log('Name:', user.first_name, user.username);
+                console.log('User DB ID:', user.id);
+                console.log('Created:', user.created_at);
+                
+                // Try to manually authenticate this user
+                console.log('Attempting manual authentication...');
+                this.currentUser = user;
+                await this.loadHealthData();
+            } else {
+                console.log('PROBLEM: User not found in database');
+                console.log('You may need to use /start in the bot first');
+            }
+            
+        } catch (e) {
+            console.log('Lookup failed with exception:', e);
         }
     }
 
