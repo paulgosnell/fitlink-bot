@@ -1,0 +1,30 @@
+name: Guard architecture invariants
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify proxy routes and JWT configs unchanged
+        run: |
+          set -e
+          # Ensure Netlify edge mappings exist
+          grep -q "function = \"telegram-proxy\"" netlify.toml
+          grep -q "function = \"oauth-oura-proxy\"" netlify.toml
+          grep -q "function = \"oauth-strava-proxy\"" netlify.toml
+
+          # Ensure public functions have verify_jwt=false
+          for f in supabase/functions/telegram-webhook/config.toml supabase/functions/oauth-oura/config.toml supabase/functions/oauth-strava/config.toml supabase/functions/oauth-test/config.toml; do
+            if [ -f "$f" ]; then
+              grep -q "verify_jwt\s*=\s*false" "$f"
+            else
+              echo "Missing config: $f" && exit 1
+            fi
+          done
+
+          echo "Architecture guard checks passed."
+
