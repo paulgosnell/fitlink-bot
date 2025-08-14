@@ -91,11 +91,12 @@ class FitlinkDashboard {
             // Convert to number for consistency
             const userId = parseInt(telegramUserId);
             
-            // Use the Netlify proxy endpoint instead of direct database access
-            const response = await fetch('https://fitlinkbot.netlify.app/oauth-test/user-lookup', {
+            // Call Supabase Edge Function directly for user lookup
+            const response = await fetch('https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-test/user-lookup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.supabase.supabaseKey}`
                 },
                 body: JSON.stringify({ telegram_id: userId })
             });

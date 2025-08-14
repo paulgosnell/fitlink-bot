@@ -1,26 +1,9 @@
 [build]
   publish = "web/public"
   command = "echo 'Static site - no build needed'"
-  edge_functions = "netlify/edge-functions"
 
 [build.environment]
   NODE_VERSION = "18"
-
-[[edge_functions]]
-  function = "oauth-oura-proxy"
-  path = "/oauth-oura/*"
-
-[[edge_functions]]
-  function = "oauth-strava-proxy"
-  path = "/oauth-strava/*"
-
-[[edge_functions]]
-  function = "telegram-proxy"
-  path = "/api/telegram-webhook"
-
-[[edge_functions]]
-  function = "oauth-test-proxy"
-  path = "/oauth-test/*"
 
 [[redirects]]
   from = "/*"
