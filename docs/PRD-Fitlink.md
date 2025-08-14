@@ -145,14 +145,14 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 
 ## 15. Known Bugs & Issues
 - Public functions sometimes redeploy without `verify_jwt=false` → 401. Mitigation: configs added; CI uses `--no-verify-jwt`.
-- Dashboard still contains hardcoded keys; replace with Netlify env‑injected or remove service role usage from client altogether. Short‑term handled by server `oauth-test` endpoint; keep anon only in client.
+  - Dashboard now calls server via Netlify proxy (`/oauth-test/user-lookup`); no Supabase keys in client. Anon/service role use is confined to server functions.
 - Netlify Edge proxies currently use a hardcoded anon key; move to Netlify env var immediately.
 - ~~Telegram webhook secret validation disabled; re‑enable once stable via header/secret.~~ ✅ Fixed: Now validates via X-Telegram-Bot-Api-Secret-Token header.
  - ~~Oura data sync lacks scheduled cron; only manual sync via bot.~~ ✅ Fixed: Daily schedule configured (03:10 UTC) and post‑OAuth backfill enabled.
 - Migration history drift previously observed; ensure `supabase migration repair` reflects real state.
 
 ## 16. MVP Launch Task List
-- [ ] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys
+  - [ ] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys (oauth proxies already use `SUPABASE_ANON_KEY` env; ensure set in Netlify)
 - [x] Remove any service role usage from dashboard client code
 - [x] Verify CI deploys all public endpoints with JWT disabled and configs included
 - [x] Re‑enable Telegram webhook secret validation and set webhook to pretty route
@@ -164,7 +164,8 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 - [x] Verify initial backfill triggers post-OAuth for both providers
 - [x] Verify manual sync commands: `/sync_oura`, `/sync_strava`
 - [x] Complete `/status` command implementation to surface connection health
-- [ ] Finish dashboard integration status cards and error handling
+  - [ ] Finish dashboard integration status cards and error handling
+  - [x] Route dashboard data via Netlify proxy `oauth-test-proxy` and remove Supabase SDK from client
 - [ ] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s
 - [ ] Create runbook: rollback, rotate secrets, redeploy
 

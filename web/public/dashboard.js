@@ -1,14 +1,7 @@
-// Real Dashboard with Supabase Integration
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// Real Dashboard with server-side data via Netlify proxy
 
 class FitlinkDashboard {
     constructor() {
-        // Initialize Supabase client (public anon key is safe for client-side)
-        this.supabase = createClient(
-            'https://umixefoxgjmdlvvtfnmr.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NjQ4ODAsImV4cCI6MjA1MDU0MDg4MH0.xJVtJr4M_Hg1fGQ7qBGYXoW0Vx6yivfYnWCLw9_T5nE'
-        );
-        
         this.currentUser = null;
         this.healthData = null;
         this.isLoading = false;
@@ -85,8 +78,8 @@ class FitlinkDashboard {
             // Convert to number for consistency
             const userId = parseInt(telegramUserId);
             
-			// Call Supabase Edge Function directly for user lookup
-			const response = await fetch('https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-test/user-lookup', {
+			// Call backend via Netlify proxy for user lookup
+			const response = await fetch('/oauth-test/user-lookup', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -145,38 +138,7 @@ class FitlinkDashboard {
         return user;
     }
 
-    async authenticateUser(userId, token) {
-        try {
-            // First verify the dashboard token
-            const { data: tokenData, error: tokenError } = await this.supabase
-                .from('dashboard_tokens')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('token', token)
-                .gt('expires_at', new Date().toISOString())
-                .single();
-
-            if (tokenError || !tokenData) {
-                throw new Error('Invalid or expired dashboard token');
-            }
-
-            // Get user data
-            const { data: user, error } = await this.supabase
-                .from('users')
-                .select('*')
-                .eq('id', userId)
-                .single();
-
-            if (error || !user) {
-                throw new Error('User not found');
-            }
-
-            this.currentUser = user;
-            await this.loadHealthData();
-        } catch (error) {
-            this.showNotLoggedIn();
-        }
-    }
+    // Removed client-side Supabase usage; all data flows via server endpoint
 
     async loadHealthData() {
         try {
@@ -188,7 +150,7 @@ class FitlinkDashboard {
                 return;
             }
 
-            const response = await fetch('https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-test/user-lookup', {
+            const response = await fetch('/oauth-test/user-lookup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ telegram_id: telegramId })
