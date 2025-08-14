@@ -50,9 +50,13 @@ jobs:
         
         echo "📦 Deploying oauth-oura function (public)..."
         supabase functions deploy oauth-oura --project-ref $PROJECT_REF --no-verify-jwt
+        echo "📦 Deploying oauth-oura config..."
+        cat supabase/functions/oauth-oura/config.toml || true
         
         echo "📦 Deploying oauth-strava function (public)..."
         supabase functions deploy oauth-strava --project-ref $PROJECT_REF --no-verify-jwt
+        echo "📦 Deploying oauth-strava config..."
+        cat supabase/functions/oauth-strava/config.toml || true
         
         echo "📦 Deploying data-sync-oura function..."
         supabase functions deploy data-sync-oura --project-ref $PROJECT_REF
@@ -62,6 +66,8 @@ jobs:
         
         echo "📦 Deploying oauth-test function (public)..."
         supabase functions deploy oauth-test --project-ref $PROJECT_REF --no-verify-jwt
+        echo "📦 Deploying oauth-test config..."
+        cat supabase/functions/oauth-test/config.toml || true
         
         echo "📦 Deploying test-db function..."
         supabase functions deploy test-db --project-ref $PROJECT_REF

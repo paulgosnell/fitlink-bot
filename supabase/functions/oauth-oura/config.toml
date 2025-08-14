@@ -1,0 +1,11 @@
+name = "oauth-oura"
+verify_jwt = false
+
+[routes]
+include = [
+  "/oauth-oura/*",
+  "/oauth-oura/start",
+  "/oauth-oura/callback"
+]
+
+
