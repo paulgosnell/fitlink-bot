@@ -84,7 +84,7 @@ Acceptance Criteria (MVP)
 - `telegram-webhook`: POST updates, `POST /set-webhook`, `GET /healthz`
 - `oauth-oura`: `GET /start`, `GET /callback`
 - `oauth-strava`: `GET /start`, `GET /callback`
-- `data-sync-oura`: POST service-only sync; supports `{ user_id }` for targeted sync; used before briefings
+- `data-sync-oura`: POST service-only sync; supports `{ user_id, days_back }` (1–30, default 2) for targeted/backfill sync; used before briefings
 - `data-sync-strava`: POST service-only sync; supports `{ user_id }` for targeted sync; used before briefings
 - `pre-briefing-sync`: POST service-only cron at :50 past each hour to prefetch per-user data 10 minutes before briefing
 - `oauth-test`: `POST /user-lookup` (service role DB access)
@@ -146,16 +146,21 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 - Public functions sometimes redeploy without `verify_jwt=false` → 401. Mitigation: configs added; CI uses `--no-verify-jwt`.
 - Dashboard still contains hardcoded keys; replace with Netlify env‑injected or remove service role usage from client altogether. Short‑term handled by server `oauth-test` endpoint; keep anon only in client.
 - Netlify Edge proxies currently use a hardcoded anon key; move to Netlify env var immediately.
-- Telegram webhook secret validation disabled; re‑enable once stable via header/secret.
+- ~~Telegram webhook secret validation disabled; re‑enable once stable via header/secret.~~ ✅ Fixed: Now validates via X-Telegram-Bot-Api-Secret-Token header.
 - Oura data sync lacks scheduled cron; only manual sync via bot.
 - Migration history drift previously observed; ensure `supabase migration repair` reflects real state.
 
 ## 16. MVP Launch Task List
 - [ ] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys
 - [x] Remove any service role usage from dashboard client code
-- [ ] Verify CI deploys all public endpoints with JWT disabled and configs included
-- [ ] Re‑enable Telegram webhook secret validation and set webhook to pretty route
-- [ ] Add cron/scheduler for Oura daily sync; verify backfill
+- [x] Verify CI deploys all public endpoints with JWT disabled and configs included
+- [x] Re‑enable Telegram webhook secret validation and set webhook to pretty route
+- [ ] Configure Supabase schedules: `daily-briefings` (0 * * * *), `pre-briefing-sync` (50 * * * *)
+- [x] Deploy and verify `data-sync-oura`, `data-sync-strava`, `pre-briefing-sync` functions
+- [ ] Validate pre-briefing sync pulls Oura/Strava data 10 minutes before each user’s `briefing_hour` (timezone correct)
+- [ ] Validate token refresh and DB update on expiry for Oura and Strava
+- [x] Verify initial backfill triggers post-OAuth for both providers
+- [x] Verify manual sync commands: `/sync_oura`, `/sync_strava`
 - [ ] Complete `/status` command implementation to surface connection health
 - [ ] Finish dashboard integration status cards and error handling
 - [ ] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s
