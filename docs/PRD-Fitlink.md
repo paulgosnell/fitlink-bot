@@ -91,6 +91,7 @@ Acceptance Criteria (MVP)
 
 ## 6. Configuration
 - Netlify: `netlify.toml` maps edge functions for routes above.
+  - Environment: Requires `VITE_SUPABASE_ANON_KEY` set in Netlify dashboard (not `SUPABASE_ANON_KEY`)
 - Supabase functions: each has `config.toml` with `verify_jwt=false` and explicit routing when public.
 - Secrets: stored in Supabase project; CI uses `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`.
 
@@ -145,7 +146,7 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 ## 15. Known Bugs & Issues
 - Public functions sometimes redeploy without `verify_jwt=false` → 401. Mitigation: configs added; CI uses `--no-verify-jwt`.
   - Dashboard now calls server via Netlify proxy (`/oauth-test/user-lookup`); no Supabase keys in client. Anon/service role use is confined to server functions.
-- Ensure Netlify Edge proxies use Netlify env for anon key; rotate old keys ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1)).
+- Netlify Edge proxies require `VITE_SUPABASE_ANON_KEY` environment variable (not `SUPABASE_ANON_KEY`) to be set in Netlify dashboard.
 - Telegram webhook secret validation disabled; re‑enable once stable via header/secret.
 - Pre‑briefing sync job not yet implemented/scheduled ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9), [#12](https://github.com/paulgosnell/fitlink-bot/issues/12)).
 - Strava data sync function missing ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10)).
@@ -153,7 +154,7 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 - Migration history drift previously observed; ensure `supabase migration repair` reflects real state.
 
 ## 16. MVP Launch Task List
-  - [ ] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys (oauth proxies already use `SUPABASE_ANON_KEY` env; ensure set in Netlify) ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1))
+  - [x] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys (oauth proxies use `VITE_SUPABASE_ANON_KEY` env from Netlify) ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1))
   - [x] Remove any service role usage from dashboard client code
   - [x] Verify CI deploys all public endpoints with JWT disabled and configs included
   - [x] Re‑enable Telegram webhook secret validation and set webhook to pretty route

@@ -224,8 +224,9 @@ git push origin main  # GitHub Actions deploys automatically
 - This project uses Netlify Edge Functions strictly as authentication proxies
 - Keep proxies minimal; all business logic remains in Supabase Edge Functions
 - Required proxies are: `/api/telegram-webhook`, `/oauth-oura/*`, `/oauth-strava/*`
-- **Environment Variables**: Netlify Edge Functions require `SUPABASE_ANON_KEY` to be set in Netlify dashboard or CLI
-- All proxies use `context.env.SUPABASE_ANON_KEY` instead of hardcoded keys
+- **Environment Variables**: Netlify Edge Functions require `VITE_SUPABASE_ANON_KEY` to be set in Netlify dashboard
+  - The variable is named `VITE_SUPABASE_ANON_KEY` (not `SUPABASE_ANON_KEY`) in Netlify environment
+  - All proxies check for `context.env.VITE_SUPABASE_ANON_KEY` first, with fallback to `context.env.SUPABASE_ANON_KEY`
 
 ## 📡 URL MAPPING
 
@@ -254,6 +255,8 @@ git push origin main  # GitHub Actions deploys automatically
 ```javascript
 // netlify/edge-functions/oauth-[provider]-proxy.js
 export default async (request, context) => {
+  const SUPABASE_ANON_KEY = context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
+  
   // Forward with auth header
   const response = await fetch(targetUrl, {
     headers: {
@@ -305,12 +308,15 @@ export const config = {
 ```
 
 ### **Required Environment Variables**
-- **Supabase**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- **Telegram**: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`  
-- **Oura**: `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET`
-- **Strava**: `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`
-- **Weather**: `OPENWEATHER_API_KEY`
-- **AI**: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
+- **Netlify Environment**: 
+  - `VITE_SUPABASE_ANON_KEY` - Supabase anon key (used by Edge Functions)
+- **Supabase Environment**: 
+  - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+  - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`  
+  - `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET`
+  - `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`
+  - `OPENWEATHER_API_KEY`
+  - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
 
 ## 🚨 CRITICAL SUCCESS FACTORS
 
@@ -419,7 +425,20 @@ Root Cause: Direct calls bypassing Netlify proxy
 1. ✅ All user-facing URLs must use `fitlinkbot.netlify.app`
 2. ✅ Netlify edge functions must add `Authorization: Bearer <anon-key>`
 3. ✅ Check edge function configuration and deployment
-4. ✅ Verify `SUPABASE_ANON_KEY` is correct and not expired
+4. ✅ Verify `VITE_SUPABASE_ANON_KEY` is set in Netlify environment variables
+5. ✅ Ensure proxies check for `VITE_SUPABASE_ANON_KEY` first, then fallback to `SUPABASE_ANON_KEY`
+
+### **Problem: Uncaught Exception in Edge Function**
+```
+Symptoms: "uncaught exception during edge function invocation"
+Root Cause: Missing environment variable in Netlify
+```
+
+**Solution Checklist:**
+1. ✅ Check Netlify dashboard → Site settings → Environment variables
+2. ✅ Ensure `VITE_SUPABASE_ANON_KEY` is set (not just `SUPABASE_ANON_KEY`)
+3. ✅ Verify the anon key value is correct and not expired
+4. ✅ Edge functions should use: `context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY`
 
 ---
 
