@@ -25,6 +25,15 @@ export default async (request, context) => {
     }
 
     const response = await fetch(targetUrl, init);
+    
+    // Handle redirects properly
+    if (response.status === 301 || response.status === 302 || response.status === 303 || response.status === 307 || response.status === 308) {
+      const location = response.headers.get('Location');
+      if (location) {
+        return Response.redirect(location, response.status);
+      }
+    }
+    
     const bodyText = await response.text();
     const contentType = response.headers.get('Content-Type') || 'text/html; charset=UTF-8';
 
