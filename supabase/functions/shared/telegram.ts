@@ -490,6 +490,12 @@ async function handleCommand(
     case "/status":
       await handleStatusCommand(chatId, userId, supabase, botToken);
       break;
+    case "/sync_oura":
+      await handleSyncOura(chatId, userId, supabase, botToken);
+      break;
+    case "/sync_strava":
+      await handleSyncStrava(chatId, userId, supabase, botToken);
+      break;
     default:
       await sendTelegramMessage(
         botToken,
@@ -1092,9 +1098,22 @@ async function handleSyncStrava(chatId: number, userId: number, supabase: any, b
       return;
     }
 
-    // For now, just acknowledge the sync request
-    // TODO: Implement Strava data sync function
-    await sendTelegramMessage(botToken, chatId, "🔄 *Strava Sync Requested*\n\nStrava data synchronization is coming soon!\n\nFor now, your connected activities will be available in future briefings.");
+    // Call the data sync function
+    const baseUrl = Deno.env.get("BASE_URL");
+    const syncResponse = await fetch(`${baseUrl}/functions/v1/data-sync-strava`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+      },
+      body: JSON.stringify({ user_id: user.id })
+    });
+
+    if (syncResponse.ok) {
+      await sendTelegramMessage(botToken, chatId, "✅ *Strava Data Synced!*\n\nYour latest activities have been updated.");
+    } else {
+      throw new Error(`Sync failed: ${syncResponse.status}`);
+    }
     
   } catch (error) {
     console.error("Error syncing Strava data:", error);
@@ -1214,44 +1233,118 @@ async function handleStatusCommand(
       return;
     }
 
-    const { data: tokens } = await supabase
+    const { data: providers } = await supabase
       .from("providers")
-      .select("provider")
+      .select("provider, expires_at")
       .eq("user_id", user.id)
       .eq("is_active", true);
 
-    const connectedProviders = tokens?.map(t => t.provider) || [];
-    
+    const connectedProviders = providers?.map((p: any) => p.provider) || [];
     const ouraConnected = connectedProviders.includes("oura");
     const stravaConnected = connectedProviders.includes("strava");
-    
+
+    const ouraProvider = (providers || []).find((p: any) => p.provider === "oura");
+    const stravaProvider = (providers || []).find((p: any) => p.provider === "strava");
+
+    // Fetch last data timestamps for health indicator
+    const [ouraLastRow, stravaLastRow] = await Promise.all([
+      ouraConnected
+        ? supabase
+            .from("oura_sleep")
+            .select("date, created_at")
+            .eq("user_id", user.id)
+            .order("date", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      stravaConnected
+        ? supabase
+            .from("activities")
+            .select("start_time,name,activity_type")
+            .eq("user_id", user.id)
+            .eq("source", "strava")
+            .order("start_time", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null })
+    ]);
+
+    const now = new Date();
+    function formatRelative(target?: Date | null): string {
+      if (!target || isNaN(target.getTime())) return "never";
+      const diffMs = now.getTime() - target.getTime();
+      if (diffMs < 0) return "in the future";
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 48) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days}d ago`;
+    }
+    function formatToken(expiresAt?: string | null): string {
+      if (!expiresAt) return "n/a";
+      const d = new Date(expiresAt);
+      if (isNaN(d.getTime())) return "n/a";
+      const diff = d.getTime() - now.getTime();
+      const hrs = Math.floor(diff / 3600000);
+      if (diff <= 0) return "Expired";
+      if (hrs < 72) return `Expiring in ${hrs}h`;
+      const days = Math.floor(hrs / 24);
+      return `Expires in ${days}d`;
+    }
+
     const ouraStatus = ouraConnected ? "✅ Connected" : "❌ Not connected";
     const stravaStatus = stravaConnected ? "✅ Connected" : "❌ Not connected";
+    const ouraIcon = ouraConnected ? "🟢" : "🔴";
+    const stravaIcon = stravaConnected ? "🟢" : "🔴";
+
+    const ouraLastDateObj = (ouraLastRow as any)?.data?.date
+      ? new Date(`${(ouraLastRow as any).data.date}T00:00:00Z`)
+      : ((ouraLastRow as any)?.data?.created_at ? new Date((ouraLastRow as any).data.created_at) : null);
+    const stravaLastTimeObj = (stravaLastRow as any)?.data?.start_time
+      ? new Date((stravaLastRow as any).data.start_time)
+      : null;
+
+    const statusLines: string[] = [];
+    statusLines.push(`${ouraIcon} **Oura Ring:** ${ouraStatus}`);
+    if (ouraConnected) {
+      statusLines.push(`• Last sleep: ${ouraLastDateObj ? ouraLastDateObj.toISOString().slice(0, 10) : "no data"} (${formatRelative(ouraLastDateObj)})`);
+      statusLines.push(`• Token: ${formatToken(ouraProvider?.expires_at)}`);
+    }
+    statusLines.push("");
+    statusLines.push(`${stravaIcon} **Strava:** ${stravaStatus}`);
+    if (stravaConnected) {
+      statusLines.push(`• Last activity: ${stravaLastTimeObj ? stravaLastTimeObj.toISOString().replace('T', ' ').slice(0, 16) : "no data"} (${formatRelative(stravaLastTimeObj)})`);
+      statusLines.push(`• Token: ${formatToken(stravaProvider?.expires_at)}`);
+    }
 
     // Generate appropriate action messages based on connection status
-    let actionMessages = [];
-    
+    const actionMessages: string[] = [];
+    const keyboardRows: any[] = [];
     if (!ouraConnected) {
       actionMessages.push("• Use /connect\\_oura to link your Oura Ring");
+      keyboardRows.push([{ text: "🟢 Connect Oura", callback_data: "connect_oura" }]);
     } else {
       actionMessages.push("• Use /disconnect\\_oura to unlink your Oura Ring");
+      keyboardRows.push([{ text: "🔄 Sync Oura", callback_data: "sync_oura" }]);
     }
-    
     if (!stravaConnected) {
       actionMessages.push("• Use /connect\\_strava to link your Strava account");
+      keyboardRows.push([{ text: "🔴 Connect Strava", callback_data: "connect_strava" }]);
     } else {
       actionMessages.push("• Use /disconnect\\_strava to unlink your Strava account");
+      keyboardRows.push([{ text: "🔄 Sync Strava", callback_data: "sync_strava" }]);
     }
 
     const message = `📱 *Device Status*
 
-🟢 **Oura Ring:** ${ouraStatus}
-🔴 **Strava:** ${stravaStatus}
+${statusLines.join("\n")}
 
 *Available Actions:*
 ${actionMessages.join("\n")}`;
 
-    await sendTelegramMessage(botToken, chatId, message);
+    const keyboard = keyboardRows.length > 0 ? { inline_keyboard: keyboardRows } : undefined;
+    await sendTelegramMessage(botToken, chatId, message, keyboard);
     
   } catch (error) {
     console.error("Error checking status:", error);

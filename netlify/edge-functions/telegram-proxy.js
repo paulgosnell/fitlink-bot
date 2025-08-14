@@ -4,12 +4,20 @@ export default async (request, context) => {
 
   const targetUrl = `${SUPABASE_URL}/functions/v1/telegram-webhook`;
 
+  const headers = {
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'Content-Type': request.headers.get('Content-Type') || 'application/json'
+  };
+  
+  // Forward the Telegram secret token header if present
+  const telegramSecretToken = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
+  if (telegramSecretToken) {
+    headers['X-Telegram-Bot-Api-Secret-Token'] = telegramSecretToken;
+  }
+
   const init = {
     method: request.method,
-    headers: {
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': request.headers.get('Content-Type') || 'application/json'
-    },
+    headers,
     redirect: 'manual'
   };
 

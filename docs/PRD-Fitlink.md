@@ -100,6 +100,7 @@ Acceptance Criteria (MVP)
 Schedules (configure in Supabase Scheduled Triggers):
 - `daily-briefings`: `0 * * * *` (hourly). Generates briefings for users whose local hour matches `users.briefing_hour`.
 - `pre-briefing-sync`: `50 * * * *` (hourly at :50). Pulls Oura/Strava data for users whose local time is 10 minutes before their `briefing_hour`.
+ - `data-sync-oura`: `10 3 * * *` (daily 03:10 UTC). Refreshes Oura `daily_sleep`/`daily_readiness` for all active Oura users with `days_back=2` by default. A deeper initial backfill (`days_back=30`) is triggered automatically post‑OAuth.
 
 ## 8. Operational Playbooks
 ### 8.1 Telegram webhook set
@@ -120,7 +121,7 @@ Schedules (configure in Supabase Scheduled Triggers):
 
 ## 11. Bot Commands (MVP Scope & Hook‑up Status)
 - `/start` — welcome + status check [MVP: wire to `telegram-webhook`]
-- `/status` — show connected providers + last sync [MVP]
+ - `/status` — show provider connections, last sync, and token expiry [MVP]
 - `/connect_oura` — returns OAuth start link [MVP]
 - `/connect_strava` — returns OAuth start link [MVP]
 - `/help` — list commands [MVP]
@@ -147,7 +148,7 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 - Dashboard still contains hardcoded keys; replace with Netlify env‑injected or remove service role usage from client altogether. Short‑term handled by server `oauth-test` endpoint; keep anon only in client.
 - Netlify Edge proxies currently use a hardcoded anon key; move to Netlify env var immediately.
 - ~~Telegram webhook secret validation disabled; re‑enable once stable via header/secret.~~ ✅ Fixed: Now validates via X-Telegram-Bot-Api-Secret-Token header.
-- Oura data sync lacks scheduled cron; only manual sync via bot.
+ - ~~Oura data sync lacks scheduled cron; only manual sync via bot.~~ ✅ Fixed: Daily schedule configured (03:10 UTC) and post‑OAuth backfill enabled.
 - Migration history drift previously observed; ensure `supabase migration repair` reflects real state.
 
 ## 16. MVP Launch Task List
@@ -157,11 +158,12 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 - [x] Re‑enable Telegram webhook secret validation and set webhook to pretty route
 - [ ] Configure Supabase schedules: `daily-briefings` (0 * * * *), `pre-briefing-sync` (50 * * * *)
 - [x] Deploy and verify `data-sync-oura`, `data-sync-strava`, `pre-briefing-sync` functions
+- [x] Configure Supabase schedule: daily `data-sync-oura` (03:10 UTC)
 - [ ] Validate pre-briefing sync pulls Oura/Strava data 10 minutes before each user’s `briefing_hour` (timezone correct)
 - [ ] Validate token refresh and DB update on expiry for Oura and Strava
 - [x] Verify initial backfill triggers post-OAuth for both providers
 - [x] Verify manual sync commands: `/sync_oura`, `/sync_strava`
-- [ ] Complete `/status` command implementation to surface connection health
+- [x] Complete `/status` command implementation to surface connection health
 - [ ] Finish dashboard integration status cards and error handling
 - [ ] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s
 - [ ] Create runbook: rollback, rotate secrets, redeploy

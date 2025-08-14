@@ -58,11 +58,17 @@ jobs:
         echo "📦 Deploying oauth-strava config..."
         cat supabase/functions/oauth-strava/config.toml || true
         
-        echo "📦 Deploying data-sync-oura function..."
-        supabase functions deploy data-sync-oura --project-ref $PROJECT_REF
+         echo "📦 Deploying data-sync-oura function..."
+         supabase functions deploy data-sync-oura --project-ref $PROJECT_REF
+
+         echo "📦 Deploying data-sync-strava function..."
+         supabase functions deploy data-sync-strava --project-ref $PROJECT_REF
         
         echo "📦 Deploying daily-briefings function..."
         supabase functions deploy daily-briefings --project-ref $PROJECT_REF
+
+         echo "📦 Deploying pre-briefing-sync function..."
+         supabase functions deploy pre-briefing-sync --project-ref $PROJECT_REF
         
         echo "📦 Deploying oauth-test function (public)..."
         supabase functions deploy oauth-test --project-ref $PROJECT_REF --no-verify-jwt

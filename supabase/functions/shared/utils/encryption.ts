@@ -3,14 +3,14 @@
 const ALGORITHM = 'AES-GCM';
 const IV_LENGTH = 12; // 96 bits
 
-function getEncryptionKey(): CryptoKey {
+async function getEncryptionKey(): Promise<CryptoKey> {
   const keyString = Deno.env.get('ENCRYPTION_KEY');
   if (!keyString || keyString.length !== 32) {
     throw new Error('ENCRYPTION_KEY must be exactly 32 characters');
   }
   
   const keyData = new TextEncoder().encode(keyString);
-  return crypto.subtle.importKey(
+  return await crypto.subtle.importKey(
     'raw',
     keyData,
     { name: ALGORITHM },

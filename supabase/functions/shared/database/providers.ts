@@ -17,11 +17,12 @@ export async function getProvidersByUserId(
   }
 
   // Decrypt tokens before returning
-  return (data || []).map(provider => ({
+  const decrypted = await Promise.all((data || []).map(async (provider) => ({
     ...provider,
-    access_token: decryptToken(provider.access_token),
-    refresh_token: provider.refresh_token ? decryptToken(provider.refresh_token) : undefined
-  }));
+    access_token: await decryptToken(provider.access_token),
+    refresh_token: provider.refresh_token ? await decryptToken(provider.refresh_token) : undefined
+  })));
+  return decrypted;
 }
 
 export async function getProviderByUserAndType(
@@ -47,8 +48,8 @@ export async function getProviderByUserAndType(
   // Decrypt tokens before returning
   return {
     ...data,
-    access_token: decryptToken(data.access_token),
-    refresh_token: data.refresh_token ? decryptToken(data.refresh_token) : undefined
+    access_token: await decryptToken(data.access_token),
+    refresh_token: data.refresh_token ? await decryptToken(data.refresh_token) : undefined
   };
 }
 
@@ -67,8 +68,8 @@ export async function createOrUpdateProvider(
   // Encrypt tokens before storing
   const encryptedData = {
     ...providerData,
-    access_token: encryptToken(providerData.access_token),
-    refresh_token: providerData.refresh_token ? encryptToken(providerData.refresh_token) : undefined
+    access_token: await encryptToken(providerData.access_token),
+    refresh_token: providerData.refresh_token ? await encryptToken(providerData.refresh_token) : undefined
   };
 
   // Try to update existing provider first
@@ -127,8 +128,8 @@ export async function updateProviderTokens(
   }
 ): Promise<Provider> {
   const encryptedTokens = {
-    access_token: encryptToken(tokens.access_token),
-    refresh_token: tokens.refresh_token ? encryptToken(tokens.refresh_token) : undefined,
+    access_token: await encryptToken(tokens.access_token),
+    refresh_token: tokens.refresh_token ? await encryptToken(tokens.refresh_token) : undefined,
     expires_at: tokens.expires_at,
     updated_at: new Date().toISOString()
   };
@@ -195,9 +196,10 @@ export async function getExpiredProviders(
   if (error) throw error;
 
   // Decrypt tokens before returning
-  return (data || []).map(provider => ({
+  const decrypted = await Promise.all((data || []).map(async (provider) => ({
     ...provider,
-    access_token: decryptToken(provider.access_token),
-    refresh_token: provider.refresh_token ? decryptToken(provider.refresh_token) : undefined
-  }));
+    access_token: await decryptToken(provider.access_token),
+    refresh_token: provider.refresh_token ? await decryptToken(provider.refresh_token) : undefined
+  })));
+  return decrypted;
 }
