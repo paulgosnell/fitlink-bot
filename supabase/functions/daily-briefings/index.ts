@@ -67,6 +67,30 @@ serve(async (req) => {
             return;
           }
 
+          console.log(`Pre-syncing data for user ${user.id} before briefing...`);
+          try {
+            const baseUrl = Deno.env.get('SUPABASE_URL');
+            const anon = Deno.env.get('SUPABASE_ANON_KEY');
+            if (baseUrl && anon) {
+              // Trigger Oura and Strava syncs 10 minutes before top of hour ideally; here we pre-fetch just-in-time
+              // Narrow to this user_id for speed
+              await Promise.all([
+                fetch(`${baseUrl}/functions/v1/data-sync-oura`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anon}` },
+                  body: JSON.stringify({ user_id: user.id })
+                }).catch(() => undefined),
+                fetch(`${baseUrl}/functions/v1/data-sync-strava`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anon}` },
+                  body: JSON.stringify({ user_id: user.id })
+                }).catch(() => undefined)
+              ]);
+            }
+          } catch (e) {
+            console.warn('Pre-sync failed for user', user.id, e);
+          }
+
           console.log(`Generating briefing for user ${user.id} (${user.first_name})`);
 
           // Generate and send briefing

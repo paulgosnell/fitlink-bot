@@ -146,4 +146,26 @@ curl -X POST "https://api.telegram.org/bot{YOUR_BOT_TOKEN}/setWebhook" \
 - [ ] OAuth flows work end-to-end
 - [ ] Daily briefings generate correctly
 
+## Netlify Deployment (Optional - for WebApp and Proxies)
+
+If using Netlify for hosting the web dashboard and edge function proxies:
+
+### Configure Netlify Environment Variables
+In your Netlify dashboard or via CLI:
+```bash
+# Set the Supabase anon key for edge function proxies
+netlify env:set SUPABASE_ANON_KEY "your-supabase-anon-key"
+```
+
+**Required Netlify Environment Variables:**
+- `SUPABASE_ANON_KEY` - Your Supabase anonymous key (from project settings)
+
+### Deploy to Netlify
+```bash
+# Deploy with Netlify CLI
+netlify deploy --prod
+
+# Or connect to GitHub for auto-deploys
+```
+
 **Your Fitlink Bot should now be live and ready for users!** 🎉

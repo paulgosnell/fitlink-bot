@@ -1,6 +1,6 @@
-export default async (request) => {
+export default async (request, context) => {
   const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NjQ4ODAsImV4cCI6MjA1MDU0MDg4MH0.xJVtJr4M_Hg1fGQ7qBGYXoW0Vx6yivfYnWCLw9_T5nE';
+  const SUPABASE_ANON_KEY = context.env.SUPABASE_ANON_KEY;
 
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/oauth-oura/, '/oauth-oura');

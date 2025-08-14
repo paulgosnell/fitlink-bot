@@ -60,6 +60,21 @@ serve(async (req) => {
           scopes: ['email', 'personal', 'daily']
         });
 
+        // Trigger initial backfill for this user (best-effort)
+        try {
+          const baseUrl = Deno.env.get('SUPABASE_URL');
+          const anon = Deno.env.get('SUPABASE_ANON_KEY');
+          if (baseUrl && anon) {
+            await fetch(`${baseUrl}/functions/v1/data-sync-oura`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anon}` },
+              body: JSON.stringify({ user_id: user.id, days_back: 30 })
+            });
+          }
+        } catch (_) {
+          // ignore backfill failure
+        }
+
         const html = `<!DOCTYPE html>
 <html lang="en">
 <head>

@@ -2,22 +2,16 @@ export default async (request, context) => {
   const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
   const SUPABASE_ANON_KEY = context.env.SUPABASE_ANON_KEY;
 
-  const targetUrl = `${SUPABASE_URL}/functions/v1/telegram-webhook`;
-
-  const headers = {
-    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    'Content-Type': request.headers.get('Content-Type') || 'application/json'
-  };
-  
-  // Forward the Telegram secret token header if present
-  const telegramSecretToken = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
-  if (telegramSecretToken) {
-    headers['X-Telegram-Bot-Api-Secret-Token'] = telegramSecretToken;
-  }
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/^\/oauth-test/, '/oauth-test');
+  const targetUrl = `${SUPABASE_URL}/functions/v1${path}${url.search}`;
 
   const init = {
     method: request.method,
-    headers,
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': request.headers.get('Content-Type') || 'application/json'
+    },
     redirect: 'manual'
   };
 
@@ -39,7 +33,7 @@ export default async (request, context) => {
 };
 
 export const config = {
-  path: ['/api/telegram-webhook']
+  path: ['/oauth-test', '/oauth-test/*']
 };
 
 

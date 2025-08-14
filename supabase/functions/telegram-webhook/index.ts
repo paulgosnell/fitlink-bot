@@ -24,42 +24,59 @@ serve(async (req) => {
 
     // Self-serve webhook setup (uses function secrets)
     if (req.method === 'POST' && url.pathname.endsWith('/set-webhook')) {
-      const baseUrl = Deno.env.get('BASE_URL');
       const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
-      const webhookSecret = Deno.env.get('TELEGRAM_WEBHOOK_SECRET') || 'webhook-secret';
+      const webhookSecret = Deno.env.get('TELEGRAM_WEBHOOK_SECRET');
 
-      if (!baseUrl || !botToken) {
-        return new Response(JSON.stringify({ error: 'Missing BASE_URL or TELEGRAM_BOT_TOKEN' }), {
+      if (!botToken) {
+        return new Response(JSON.stringify({ error: 'Missing TELEGRAM_BOT_TOKEN' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      const webhookUrl = `${baseUrl}/telegram/webhook/${webhookSecret}`;
+      // Use the pretty URL via Netlify proxy
+      const webhookUrl = 'https://fitlinkbot.netlify.app/api/telegram-webhook';
       const tgUrl = `https://api.telegram.org/bot${botToken}/setWebhook`;
+      
+      const payload: any = {
+        url: webhookUrl,
+        drop_pending_updates: true,
+        allowed_updates: ['message', 'callback_query']
+      };
+      
+      // Include secret token if available
+      if (webhookSecret) {
+        payload.secret_token = webhookSecret;
+      }
+      
       const tgResp = await fetch(tgUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: webhookUrl })
+        body: JSON.stringify(payload)
       });
       const tgJson = await tgResp.json().catch(() => ({}));
 
-      return new Response(JSON.stringify({ ok: tgResp.ok, status: tgResp.status, result: tgJson, webhookUrl }), {
+      return new Response(JSON.stringify({ 
+        ok: tgResp.ok, 
+        status: tgResp.status, 
+        result: tgJson, 
+        webhookUrl,
+        secretConfigured: !!webhookSecret 
+      }), {
         status: tgResp.ok ? 200 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     if (req.method === 'POST') {
-      // Skip webhook secret verification for now to fix immediate issue
-      // TODO: Re-enable after deployment issues are resolved
-      // const secret = url.searchParams.get('secret');
-      // const expectedSecret = Deno.env.get('TELEGRAM_WEBHOOK_SECRET');
+      // Verify webhook secret from header
+      const secretToken = req.headers.get('X-Telegram-Bot-Api-Secret-Token');
+      const expectedSecret = Deno.env.get('TELEGRAM_WEBHOOK_SECRET');
       
-      // if (!expectedSecret || secret !== expectedSecret) {
-      //   console.error('Invalid webhook secret');
-      //   return new Response('Unauthorized', { status: 401 });
-      // }
+      if (expectedSecret && secretToken !== expectedSecret) {
+        console.error('Invalid webhook secret token');
+        return new Response('Unauthorized', { status: 401 });
+      }
 
       // Initialize Supabase client
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
