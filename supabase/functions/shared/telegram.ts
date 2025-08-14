@@ -491,11 +491,21 @@ async function handleCommand(
       await handleStatusCommand(chatId, userId, supabase, botToken);
       break;
     default:
-      await sendTelegramMessage(
-        botToken,
-        chatId,
-        "Unknown command. Use /start to see available commands."
-      );
+      // Route to help for unknown slash commands
+      if (cmd.startsWith('/')) {
+        await sendTelegramMessage(
+          botToken,
+          chatId,
+          "Unknown command. Showing /help with available options."
+        );
+        await handleHelpCommand(chatId, userId, supabase, botToken);
+      } else {
+        await sendTelegramMessage(
+          botToken,
+          chatId,
+          "Unknown command. Use /start to see available commands."
+        );
+      }
   }
 }
 

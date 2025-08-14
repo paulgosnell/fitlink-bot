@@ -174,17 +174,23 @@ serve(async (req) => {
 
   // OAuth start
   if (path.endsWith('/start')) {
-    const userId = url.searchParams.get('user_id');
-    const clientId = Deno.env.get("OURA_CLIENT_ID");
-    const baseUrl = "https://fitlinkbot.netlify.app"; // Use Netlify proxy for callbacks
-    
-    if (userId && clientId) {
+    try {
+      const userId = url.searchParams.get('user_id');
+      const clientId = Deno.env.get("OURA_CLIENT_ID");
+      const baseUrl = Deno.env.get('BASE_URL') || "https://fitlinkbot.netlify.app";
+      
+      if (!userId) return new Response(JSON.stringify({ error: 'Missing user_id' }), { status: 400, headers: corsHeaders });
+      if (!clientId) return new Response(JSON.stringify({ error: 'Missing OURA_CLIENT_ID' }), { status: 500, headers: corsHeaders });
+
       const state = `${userId}_${crypto.randomUUID()}`;
       const redirectUri = `${baseUrl}/oauth-oura/callback`;
       const ouraAuthUrl = `https://cloud.ouraring.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=email personal daily&state=${state}`;
       
       console.log('Redirecting to Oura OAuth:', ouraAuthUrl);
       return Response.redirect(ouraAuthUrl);
+    } catch (e) {
+      console.error('OAuth start error (Oura):', e);
+      return new Response(JSON.stringify({ error: 'OAuth start failed' }), { status: 500, headers: corsHeaders });
     }
   }
 

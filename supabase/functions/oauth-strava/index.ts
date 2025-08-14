@@ -147,11 +147,14 @@ serve(async (req) => {
 
   // OAuth start
   if (path.endsWith('/start')) {
-    const userId = url.searchParams.get('user_id');
-    const clientId = Deno.env.get('STRAVA_CLIENT_ID');
-    const baseUrl = "https://fitlinkbot.netlify.app"; // Use Netlify proxy for callbacks
+    try {
+      const userId = url.searchParams.get('user_id');
+      const clientId = Deno.env.get('STRAVA_CLIENT_ID');
+      const baseUrl = Deno.env.get('BASE_URL') || "https://fitlinkbot.netlify.app";
 
-    if (userId && clientId) {
+      if (!userId) return new Response(JSON.stringify({ error: 'Missing user_id' }), { status: 400, headers: corsHeaders });
+      if (!clientId) return new Response(JSON.stringify({ error: 'Missing STRAVA_CLIENT_ID' }), { status: 500, headers: corsHeaders });
+
       const state = `${userId}_${crypto.randomUUID()}`;
       const redirectUri = `${baseUrl}/oauth-strava/callback`;
       
@@ -168,12 +171,10 @@ serve(async (req) => {
 
       const stravaAuthUrl = `https://www.strava.com/oauth/authorize?${params.toString()}`;
       return Response.redirect(stravaAuthUrl, 302);
+    } catch (e) {
+      console.error('OAuth start error (Strava):', e);
+      return new Response(JSON.stringify({ error: 'OAuth start failed' }), { status: 500, headers: corsHeaders });
     }
-
-    return new Response(JSON.stringify({ error: 'Missing STRAVA_CLIENT_ID or user_id' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
   }
 
   return new Response(JSON.stringify({ error: 'Endpoint not found' }), {
