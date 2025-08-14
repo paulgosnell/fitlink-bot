@@ -91,21 +91,29 @@ class FitlinkDashboard {
             // Convert to number for consistency
             const userId = parseInt(telegramUserId);
             
-            // Call Supabase Edge Function directly for user lookup
-            const response = await fetch('https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-test/user-lookup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.supabase.supabaseKey}`
-                },
-                body: JSON.stringify({ telegram_id: userId })
-            });
+			// Call Supabase Edge Function directly for user lookup
+			const response = await fetch('https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-test/user-lookup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ telegram_id: userId })
+			});
 
-            if (!response.ok) {
-                throw new Error(`User lookup failed: ${response.status}`);
-            }
+			// If user not found, treat as authenticated with no data
+			if (response.status === 404) {
+				this.currentUser = { id: null, telegram_id: userId, username: null, first_name: null, last_name: null };
+				this.healthData = { sleep: [], activities: [], summary: this.getEmptyHealthSummary() };
+				await this.checkConnectedProviders();
+				this.renderDashboard();
+				return this.currentUser;
+			}
 
-            const userData = await response.json();
+			if (!response.ok) {
+				throw new Error(`User lookup failed: ${response.status}`);
+			}
+
+			const userData = await response.json();
             
             if (userData.error) {
                 throw new Error(userData.error);
@@ -585,16 +593,17 @@ class FitlinkDashboard {
         };
     }
 
-    renderDashboard() {
+	renderDashboard() {
         const dashboard = document.getElementById('dashboard-content');
         if (!dashboard) {
             return;
         }
         
-        if (!this.healthData || (!this.healthData.sleep.length && !this.healthData.activities.length)) {
-            this.showNoData();
-            return;
-        }
+		// If authenticated but no data, show an authenticated empty state
+		if (!this.healthData || (!this.healthData.sleep.length && !this.healthData.activities.length)) {
+			this.showNoData();
+			return;
+		}
 
         const { summary } = this.healthData;
         
@@ -1253,19 +1262,19 @@ class FitlinkDashboard {
     showNoData() {
         const dashboard = document.getElementById('dashboard-content');
         if (dashboard) {
-            dashboard.innerHTML = `
-                <div class="space-y-4">
-                    <div class="glass-card p-4 rounded-xl shadow-lg text-center">
-                        <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                            <i class="fas fa-chart-line text-white"></i>
-                        </div>
-                        <h2 class="text-lg font-bold text-gray-800 mb-2">Connect Your Devices</h2>
-                        <p class="text-gray-600 text-sm mb-3">Connect Oura Ring and Strava to see your health insights</p>
-                        <a href="https://t.me/the_fitlink_bot" 
-                           class="inline-block px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
-                            Connect Devices
-                        </a>
-                    </div>
+			dashboard.innerHTML = `
+				<div class="space-y-4">
+					<div class="glass-card p-4 rounded-xl shadow-lg text-center">
+						<div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+							<i class="fas fa-user-check text-white"></i>
+						</div>
+						<h2 class="text-lg font-bold text-gray-800 mb-2">Authenticated</h2>
+						<p class="text-gray-600 text-sm mb-3">No data connected yet. Connect Oura Ring and Strava to see your health insights.</p>
+						<a href="https://t.me/the_fitlink_bot" 
+						   class="inline-block px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm font-semibold">
+							Connect Devices
+						</a>
+					</div>
                     
                     <div class="glass-card p-4 rounded-xl shadow-lg">
                         <h3 class="text-lg font-bold text-gray-800 mb-3">Available Connections</h3>
