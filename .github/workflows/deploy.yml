@@ -42,17 +42,17 @@ jobs:
         echo "📦 Deploying telegram function..."
         supabase functions deploy telegram --project-ref $PROJECT_REF
         
-        echo "📦 Deploying telegram-webhook function..."
-        supabase functions deploy telegram-webhook --project-ref $PROJECT_REF
+        echo "📦 Deploying telegram-webhook function (public)..."
+        supabase functions deploy telegram-webhook --project-ref $PROJECT_REF --no-verify-jwt
         
         echo "📦 Deploying telegram-poll function..."
         supabase functions deploy telegram-poll --project-ref $PROJECT_REF
         
-        echo "📦 Deploying oauth-oura function..."
-        supabase functions deploy oauth-oura --project-ref $PROJECT_REF
+        echo "📦 Deploying oauth-oura function (public)..."
+        supabase functions deploy oauth-oura --project-ref $PROJECT_REF --no-verify-jwt
         
-        echo "📦 Deploying oauth-strava function..."
-        supabase functions deploy oauth-strava --project-ref $PROJECT_REF
+        echo "📦 Deploying oauth-strava function (public)..."
+        supabase functions deploy oauth-strava --project-ref $PROJECT_REF --no-verify-jwt
         
         echo "📦 Deploying data-sync-oura function..."
         supabase functions deploy data-sync-oura --project-ref $PROJECT_REF
@@ -60,8 +60,8 @@ jobs:
         echo "📦 Deploying daily-briefings function..."
         supabase functions deploy daily-briefings --project-ref $PROJECT_REF
         
-        echo "📦 Deploying oauth-test function..."
-        supabase functions deploy oauth-test --project-ref $PROJECT_REF
+        echo "📦 Deploying oauth-test function (public)..."
+        supabase functions deploy oauth-test --project-ref $PROJECT_REF --no-verify-jwt
         
         echo "📦 Deploying test-db function..."
         supabase functions deploy test-db --project-ref $PROJECT_REF
