@@ -1,0 +1,9 @@
+name = "daily-briefings"
+verify_jwt = false
+
+[routes]
+include = [
+  "/daily-briefings"
+]
+
+

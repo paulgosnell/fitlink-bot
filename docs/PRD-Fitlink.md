@@ -144,21 +144,32 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 
 ## 15. Known Bugs & Issues
 - Public functions sometimes redeploy without `verify_jwt=false` → 401. Mitigation: configs added; CI uses `--no-verify-jwt`.
-- Dashboard still contains hardcoded keys; replace with Netlify env‑injected or remove service role usage from client altogether. Short‑term handled by server `oauth-test` endpoint; keep anon only in client.
-- Netlify Edge proxies currently use a hardcoded anon key; move to Netlify env var immediately.
+  - Dashboard now calls server via Netlify proxy (`/oauth-test/user-lookup`); no Supabase keys in client. Anon/service role use is confined to server functions.
+- Ensure Netlify Edge proxies use Netlify env for anon key; rotate old keys ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1)).
 - Telegram webhook secret validation disabled; re‑enable once stable via header/secret.
-- Oura data sync lacks scheduled cron; only manual sync via bot.
+- Pre‑briefing sync job not yet implemented/scheduled ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9), [#12](https://github.com/paulgosnell/fitlink-bot/issues/12)).
+- Strava data sync function missing ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10)).
+- Token refresh not implemented for Oura/Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11)).
 - Migration history drift previously observed; ensure `supabase migration repair` reflects real state.
 
 ## 16. MVP Launch Task List
-- [ ] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys
-- [x] Remove any service role usage from dashboard client code
-- [ ] Verify CI deploys all public endpoints with JWT disabled and configs included
-- [ ] Re‑enable Telegram webhook secret validation and set webhook to pretty route
-- [ ] Add cron/scheduler for Oura daily sync; verify backfill
-- [ ] Complete `/status` command implementation to surface connection health
-- [ ] Finish dashboard integration status cards and error handling
-- [ ] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s
-- [ ] Create runbook: rollback, rotate secrets, redeploy
+  - [ ] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys (oauth proxies already use `SUPABASE_ANON_KEY` env; ensure set in Netlify) ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1))
+  - [x] Remove any service role usage from dashboard client code
+  - [x] Verify CI deploys all public endpoints with JWT disabled and configs included
+  - [x] Re‑enable Telegram webhook secret validation and set webhook to pretty route
+  - [x] Configure Supabase schedules: `daily-briefings` (0 * * * *), `pre-briefing-sync` (50 * * * *) ([#12](https://github.com/paulgosnell/fitlink-bot/issues/12))
+  - [x] Deploy and verify `data-sync-oura` function
+  - [x] Implement, deploy and verify `data-sync-strava` function ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10))
+  - [x] Implement, deploy and verify `pre-briefing-sync` function ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9))
+  - [x] Configure Supabase schedule: daily `data-sync-oura` (03:10 UTC)
+  - [ ] Validate pre-briefing sync pulls Oura/Strava data 10 minutes before each user’s `briefing_hour` (timezone correct) ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9)) — implemented; schedule configured
+  - [x] Validate token refresh and DB update on expiry for Oura and Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11))
+  - [x] Verify initial backfill triggers post-OAuth for both providers
+  - [x] Verify manual sync commands: `/sync_oura`, `/sync_strava` (both call server functions via `BASE_URL`)
+  - [x] Complete `/status` command implementation to surface connection health
+  - [ ] Finish dashboard integration status cards and error handling ([#13](https://github.com/paulgosnell/fitlink-bot/issues/13))
+  - [x] Route dashboard data via Netlify proxy `oauth-test-proxy` and remove Supabase SDK from client
+  - [ ] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s ([#14](https://github.com/paulgosnell/fitlink-bot/issues/14)) — includes token refresh coverage
+  - [ ] Create runbook: rollback, rotate secrets, redeploy ([#15](https://github.com/paulgosnell/fitlink-bot/issues/15))
 
 

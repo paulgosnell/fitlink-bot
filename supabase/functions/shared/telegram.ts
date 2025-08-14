@@ -1092,9 +1092,22 @@ async function handleSyncStrava(chatId: number, userId: number, supabase: any, b
       return;
     }
 
-    // For now, just acknowledge the sync request
-    // TODO: Implement Strava data sync function
-    await sendTelegramMessage(botToken, chatId, "🔄 *Strava Sync Requested*\n\nStrava data synchronization is coming soon!\n\nFor now, your connected activities will be available in future briefings.");
+    // Call the data sync function
+    const baseUrl = Deno.env.get("BASE_URL");
+    const syncResponse = await fetch(`${baseUrl}/functions/v1/data-sync-strava`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+      },
+      body: JSON.stringify({ user_id: user.id })
+    });
+
+    if (syncResponse.ok) {
+      await sendTelegramMessage(botToken, chatId, "✅ *Strava Data Synced!*\n\nYour latest activities have been updated.\n\nYou can now use /brief to get a personalized briefing with your activity data.");
+    } else {
+      throw new Error(`Sync failed: ${syncResponse.status}`);
+    }
     
   } catch (error) {
     console.error("Error syncing Strava data:", error);

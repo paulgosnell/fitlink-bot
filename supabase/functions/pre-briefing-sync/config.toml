@@ -1,0 +1,9 @@
+name = "pre-briefing-sync"
+verify_jwt = false
+
+[routes]
+include = [
+  "/pre-briefing-sync"
+]
+
+

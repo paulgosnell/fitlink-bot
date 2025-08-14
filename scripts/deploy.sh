@@ -26,6 +26,9 @@ supabase functions deploy telegram
 supabase functions deploy oauth-oura  
 supabase functions deploy oauth-strava
 supabase functions deploy daily-briefings
+supabase functions deploy pre-briefing-sync
+supabase functions deploy data-sync-oura
+supabase functions deploy data-sync-strava
 
 # Set up environment variables
 echo "🔧 Setting environment variables..."
@@ -56,9 +59,9 @@ echo "     -d '{\"url\":\"$PROJECT_URL/functions/v1/telegram/webhook/<YOUR_SECRE
 echo ""
 
 # Set up cron job for daily briefings
-echo "⏰ Don't forget to set up the cron job for daily briefings in your Supabase dashboard:"
-echo "Function: daily-briefings"
-echo "Schedule: 0 * * * * (every hour)"
+echo "⏰ Don't forget to set up the cron jobs in your Supabase dashboard:"
+echo "- daily-briefings: 0 * * * * (top of the hour)"
+echo "- pre-briefing-sync: 50 * * * * (10 minutes before the hour)"
 echo ""
 
 echo "✅ Deployment complete!"

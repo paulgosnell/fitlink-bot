@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { getProviderByUserAndType } from "../shared/database/providers.ts";
+import { updateProviderTokens } from "../shared/database/providers.ts";
 import { decryptToken } from "../shared/utils/encryption.ts";
 
 serve(async (req) => {
@@ -19,12 +19,29 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Get all active Oura users
-    const { data: providers, error: providersError } = await supabase
+    const clientId = Deno.env.get('OURA_CLIENT_ID');
+    const clientSecret = Deno.env.get('OURA_CLIENT_SECRET');
+
+    let targetUserId: string | undefined;
+    try {
+      const body = await req.json().catch(() => ({}));
+      if (body && typeof body.user_id === 'string') {
+        targetUserId = body.user_id;
+      }
+    } catch (_e) {
+      // ignore body parse errors
+    }
+
+    // Get active Oura users (optionally targeted)
+    const query = supabase
       .from("providers")
-      .select("user_id, access_token, provider_user_id")
+      .select("id, user_id, access_token, refresh_token, expires_at, provider_user_id")
       .eq("provider", "oura")
       .eq("is_active", true);
+
+    const { data: providers, error: providersError } = targetUserId
+      ? await query.eq('user_id', targetUserId)
+      : await query;
 
     if (providersError) {
       console.error("Error fetching Oura providers:", providersError);
@@ -46,8 +63,22 @@ serve(async (req) => {
     // Sync data for each user
     for (const provider of providers) {
       try {
-        const decryptedToken = decryptToken(provider.access_token);
-        await syncOuraData(supabase, provider.user_id, decryptedToken);
+        let accessToken = decryptToken(provider.access_token);
+        const refreshToken = provider.refresh_token ? decryptToken(provider.refresh_token) : undefined;
+
+        // Refresh token if expiring within 5 minutes
+        const expiresAt = provider.expires_at ? new Date(provider.expires_at) : undefined;
+        if (clientId && clientSecret && refreshToken && expiresAt && (expiresAt.getTime() - Date.now() < 5 * 60 * 1000)) {
+          const refreshed = await refreshOuraToken(clientId, clientSecret, refreshToken);
+          await updateProviderTokens(supabase as any, provider.id, {
+            access_token: refreshed.access_token,
+            refresh_token: refreshed.refresh_token,
+            expires_at: refreshed.expires_at
+          });
+          accessToken = refreshed.access_token;
+        }
+
+        await syncOuraData(supabase, provider.user_id, accessToken);
         successCount++;
       } catch (error) {
         console.error(`Error syncing data for user ${provider.user_id}:`, error);
@@ -161,4 +192,27 @@ async function syncOuraData(supabase: any, userId: string, accessToken: string) 
       }
     }
   }
+}
+
+async function refreshOuraToken(clientId: string, clientSecret: string, refreshToken: string): Promise<{ access_token: string; refresh_token?: string; expires_at?: string; }>{
+  const resp = await fetch('https://api.ouraring.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret
+    })
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Oura refresh failed: ${resp.status} ${text}`);
+  }
+  const data = await resp.json();
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString() : undefined
+  };
 }
