@@ -1,11 +1,11 @@
 export default async (request, context) => {
   const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
-  const SUPABASE_ANON_KEY = context.env.SUPABASE_ANON_KEY;
+  const SUPABASE_ANON_KEY = context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
 
   try {
     if (!SUPABASE_ANON_KEY) {
-      console.error('Missing SUPABASE_ANON_KEY in Netlify environment');
-      return new Response('Missing SUPABASE_ANON_KEY environment variable in Netlify. Please set it in Netlify dashboard.', { status: 500 });
+      console.error('Missing VITE_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY in Netlify environment');
+      return new Response('Missing VITE_SUPABASE_ANON_KEY environment variable in Netlify. Please set it in Netlify dashboard.', { status: 500 });
     }
 
     const url = new URL(request.url);

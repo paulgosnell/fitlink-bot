@@ -1,6 +1,6 @@
 export default async (request, context) => {
   const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
-  const SUPABASE_ANON_KEY = context.env.SUPABASE_ANON_KEY;
+  const SUPABASE_ANON_KEY = context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
 
   const targetUrl = `${SUPABASE_URL}/functions/v1/telegram-webhook`;
 
