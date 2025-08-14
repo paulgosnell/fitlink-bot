@@ -4,7 +4,8 @@ export default async (request, context) => {
 
   try {
     if (!SUPABASE_ANON_KEY) {
-      return new Response('Missing SUPABASE_ANON_KEY', { status: 500 });
+      console.error('Missing SUPABASE_ANON_KEY in Netlify environment');
+      return new Response('Missing SUPABASE_ANON_KEY environment variable in Netlify. Please set it in Netlify dashboard.', { status: 500 });
     }
 
     const url = new URL(request.url);
@@ -45,6 +46,7 @@ export default async (request, context) => {
       }
     });
   } catch (err) {
+    console.error('OAuth proxy error:', err);
     return new Response(`Proxy error: ${err?.message || 'unknown'}`, { status: 500 });
   }
 };
