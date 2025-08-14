@@ -1,20 +1,7 @@
-// Real Dashboard with Supabase Integration
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// Real Dashboard with server-side data via Netlify proxy
 
 class FitlinkDashboard {
     constructor() {
-        // Initialize Supabase client (public anon key is safe for client-side)
-        this.supabase = createClient(
-            'https://umixefoxgjmdlvvtfnmr.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NjQ4ODAsImV4cCI6MjA1MDU0MDg4MH0.xJVtJr4M_Hg1fGQ7qBGYXoW0Vx6yivfYnWCLw9_T5nE'
-        );
-        
-        // Create service role client for authenticated database access
-        this.supabaseService = createClient(
-            'https://umixefoxgjmdlvvtfnmr.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXhlZm94Z2ptZGx2dnRmbm1yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNDk2NDg4MCwiZXhwIjoyMDUwNTQwODgwfQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8'
-        );
-        
         this.currentUser = null;
         this.healthData = null;
         this.isLoading = false;
@@ -91,8 +78,8 @@ class FitlinkDashboard {
             // Convert to number for consistency
             const userId = parseInt(telegramUserId);
             
-			// Call Supabase Edge Function directly for user lookup
-			const response = await fetch('https://umixefoxgjmdlvvtfnmr.supabase.co/functions/v1/oauth-test/user-lookup', {
+			// Call backend via Netlify proxy for user lookup
+			const response = await fetch('/oauth-test/user-lookup', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -151,58 +138,44 @@ class FitlinkDashboard {
         return user;
     }
 
-    async authenticateUser(userId, token) {
-        try {
-            // First verify the dashboard token
-            const { data: tokenData, error: tokenError } = await this.supabase
-                .from('dashboard_tokens')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('token', token)
-                .gt('expires_at', new Date().toISOString())
-                .single();
-
-            if (tokenError || !tokenData) {
-                throw new Error('Invalid or expired dashboard token');
-            }
-
-            // Get user data
-            const { data: user, error } = await this.supabase
-                .from('users')
-                .select('*')
-                .eq('id', userId)
-                .single();
-
-            if (error || !user) {
-                throw new Error('User not found');
-            }
-
-            this.currentUser = user;
-            await this.loadHealthData();
-        } catch (error) {
-            this.showNotLoggedIn();
-        }
-    }
+    // Removed client-side Supabase usage; all data flows via server endpoint
 
     async loadHealthData() {
         try {
             this.isLoading = true;
-            
-            // Load health data from multiple tables
-            const [sleepData, activityData] = await Promise.all([
-                this.loadSleepData(),
-                this.loadActivityData()
-            ]);
+
+            const telegramId = this.currentUser?.telegram_id;
+            if (!telegramId) {
+                this.showNoData();
+                return;
+            }
+
+            const response = await fetch('/oauth-test/user-lookup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_id: telegramId })
+            });
+
+            if (!response.ok) {
+                this.showNoData();
+                return;
+            }
+
+            const userData = await response.json();
+
+            this.currentUser = userData.user;
+            const sleepData = userData.health_data.sleep || [];
+            const activityData = userData.health_data.activities || [];
 
             this.healthData = {
                 sleep: sleepData,
                 activities: activityData,
+                providers: userData.health_data.providers || [],
                 summary: this.generateHealthSummary(sleepData, activityData)
             };
 
             this.renderDashboard();
         } catch (error) {
-            // If health data loading fails, just show no data state
             this.showNoData();
         } finally {
             this.isLoading = false;
@@ -210,53 +183,16 @@ class FitlinkDashboard {
     }
 
     async loadSleepData() {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
-
-        const { data, error } = await this.supabaseService
-            .from('oura_sleep')
-            .select('*')
-            .eq('user_id', this.currentUser.id)
-            .gte('date', dateFilter)
-            .order('date', { ascending: false })
-            .limit(30);
-        
-        if (error) {
-            return [];
-        }
-        return data || [];
+        return this.healthData?.sleep || [];
     }
 
     async loadActivityData() {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const dateFilter = thirtyDaysAgo.toISOString();
-
-        const { data, error } = await this.supabaseService
-            .from('activities')
-            .select('*')
-            .eq('user_id', this.currentUser.id)
-            .gte('start_time', dateFilter)
-            .order('start_time', { ascending: false })
-            .limit(50);
-        
-        if (error) {
-            return [];
-        }
-        return data || [];
+        return this.healthData?.activities || [];
     }
 
     async loadBriefingLogs() {
-        const { data, error } = await this.supabaseService
-            .from('brief_logs')
-            .select('*')
-            .eq('user_id', this.currentUser.id)
-            .order('sent_at', { ascending: false })
-            .limit(10);
-
-        if (error) throw error;
-        return data || [];
+        // Not available via public client; route via server function in future if needed
+        return [];
     }
     
     async checkConnectedProviders() {
@@ -916,8 +852,15 @@ class FitlinkDashboard {
     }
 
     renderIntegrationStatus() {
-        const ouraStatus = this.healthData.sleep.length > 0 ? 'optimal' : 'warning';
-        const stravaStatus = this.healthData.activities.length > 0 ? 'optimal' : 'warning';
+        const providers = (this.healthData && this.healthData.providers) ? this.healthData.providers : [];
+        const hasOura = providers.some(p => p.provider === 'oura' && p.is_active);
+        const hasStrava = providers.some(p => p.provider === 'strava' && p.is_active);
+        const ouraStatus = hasOura && this.healthData.sleep.length > 0 ? 'optimal' : (hasOura ? 'warning' : 'error');
+        const stravaStatus = hasStrava && this.healthData.activities.length > 0 ? 'optimal' : (hasStrava ? 'warning' : 'error');
+        const ouraStatusText = ouraStatus === 'optimal' ? 'Connected' : (ouraStatus === 'warning' ? 'Connected (no recent data)' : 'Not connected');
+        const stravaStatusText = stravaStatus === 'optimal' ? 'Active' : (stravaStatus === 'warning' ? 'Connected (no recent data)' : 'Not connected');
+        const ouraCount = this.healthData.sleep.length;
+        const stravaCount = this.healthData.activities.length;
         
         return `
             <section class="mb-6">
@@ -939,14 +882,19 @@ class FitlinkDashboard {
                         <div class="text-xs text-gray-600 space-y-1">
                             <div class="flex justify-between">
                                 <span>Data Points:</span>
-                                <span class="font-semibold">${this.healthData.sleep.length} days</span>
+                                <span class="font-semibold">${ouraCount} days</span>
                             </div>
                             <div class="flex justify-between">
                                 <span>Status:</span>
-                                <span class="font-semibold text-${ouraStatus === 'optimal' ? 'green' : 'yellow'}-600">
-                                    ${ouraStatus === 'optimal' ? 'Connected' : 'Limited Data'}
+                                <span class="font-semibold ${ouraStatus === 'optimal' ? 'text-green-600' : (ouraStatus === 'warning' ? 'text-yellow-600' : 'text-red-600')}">
+                                    ${ouraStatusText}
                                 </span>
                             </div>
+                            ${!hasOura ? `
+                                <div class="mt-2">
+                                    <a href="https://t.me/the_fitlink_bot" class="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs">Connect Oura</a>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
 
@@ -966,14 +914,19 @@ class FitlinkDashboard {
                         <div class="text-xs text-gray-600 space-y-1">
                             <div class="flex justify-between">
                                 <span>Activities:</span>
-                                <span class="font-semibold">${this.healthData.activities.length} recorded</span>
+                                <span class="font-semibold">${stravaCount} recorded</span>
                             </div>
                             <div class="flex justify-between">
                                 <span>Status:</span>
-                                <span class="font-semibold text-${stravaStatus === 'optimal' ? 'green' : 'yellow'}-600">
-                                    ${stravaStatus === 'optimal' ? 'Active' : 'Limited Data'}
+                                <span class="font-semibold ${stravaStatus === 'optimal' ? 'text-green-600' : (stravaStatus === 'warning' ? 'text-yellow-600' : 'text-red-600')}">
+                                    ${stravaStatusText}
                                 </span>
                             </div>
+                            ${!hasStrava ? `
+                                <div class="mt-2">
+                                    <a href="https://t.me/the_fitlink_bot" class="inline-block px-3 py-1 bg-blue-600 text-white rounded text-xs">Connect Strava</a>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>

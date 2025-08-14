@@ -21,9 +21,9 @@ External Requests → Netlify Proxy (adds auth) → Supabase Edge Functions (bus
 ### **Layer 1: Netlify (Authentication Proxy + Static Hosting)**
 - **Purpose**: Authentication proxy + static web dashboard hosting
 - **Location**: `fitlinkbot.netlify.app`
-- **Proxy Functions**: Add Authorization headers and forward to Supabase
+- **Proxy Functions (Edge Functions)**: Minimal Netlify Edge Functions add the required `Authorization` header and forward to Supabase. No business logic lives here.
 - **Static Files**: `web/public/` → Web dashboard
-- **⚠️ NOTE**: NO Netlify Edge Functions exist in this project - it's pure proxy/static hosting
+- **Important**: Netlify Edge Functions are REQUIRED as thin proxies for public inbound traffic (Telegram webhooks, OAuth start/callback). Do not remove.
 
 ### **Layer 2: Supabase Edge Functions (All Business Logic)**
 - **Purpose**: ALL bot logic, OAuth processing, data operations
@@ -220,10 +220,12 @@ git commit -m "Update web dashboard"
 git push origin main  # GitHub Actions deploys automatically
 ```
 
-### **⚠️ NO NETLIFY EDGE FUNCTIONS**
-- This project does NOT use Netlify Edge Functions
-- Netlify only provides proxy/static hosting
-- All function logic is in Supabase Edge Functions
+### **Netlify Edge Functions Policy**
+- This project uses Netlify Edge Functions strictly as authentication proxies
+- Keep proxies minimal; all business logic remains in Supabase Edge Functions
+- Required proxies are: `/api/telegram-webhook`, `/oauth-oura/*`, `/oauth-strava/*`
+- **Environment Variables**: Netlify Edge Functions require `SUPABASE_ANON_KEY` to be set in Netlify dashboard or CLI
+- All proxies use `context.env.SUPABASE_ANON_KEY` instead of hardcoded keys
 
 ## 📡 URL MAPPING
 

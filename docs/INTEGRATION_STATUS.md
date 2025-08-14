@@ -11,10 +11,11 @@
 - **Telegram**: ✅ Connect/disconnect handlers, status display
 - **Database**: ✅ Encrypted token storage in `providers` table
 
-#### 2. **Strava** 🔴
-- **Status**: Complete OAuth flow implemented
+#### 2. **Strava** 🟡
+- **Status**: OAuth flow implemented; background sync implemented
 - **Features**: Training activities and performance metrics
 - **OAuth**: ✅ Token exchange, database storage, error handling
+- **Sync**: ✅ `data-sync-strava` (last 30 days, upsert to `activities`, token refresh)
 - **Telegram**: ✅ Connect/disconnect handlers, status display
 - **Database**: ✅ Encrypted token storage in `providers` table
 
@@ -45,10 +46,10 @@ The database is already set up to support multiple providers:
 - [ ] Monitor error rates and user feedback
 
 ### 2. **Data Synchronization**
-- [ ] Implement background data sync for Oura
-- [ ] Implement background data sync for Strava
+- [x] Implement background data sync for Oura
+- [x] Implement background data sync for Strava
 - [ ] Create unified data models
-- [ ] Set up scheduled sync jobs
+- [ ] Set up scheduled sync jobs (pre-briefing :50, daily brief :00)
 
 ### 3. **Enhanced AI Briefings**
 - [ ] Integrate Strava data into daily briefings
@@ -156,9 +157,8 @@ The database is already set up to support multiple providers:
 ## 🚧 **Known Issues & Limitations**
 
 ### 1. **OAuth Token Refresh**
-- Current implementation doesn't handle token expiration
-- Need to implement refresh token logic
-- Priority: Medium
+- Implemented for Oura and Strava in sync flows (refresh if expiring <5m)
+- Priority: Verify during smoke tests
 
 ### 2. **Rate Limiting**
 - No rate limiting implemented

@@ -3,7 +3,7 @@ export default async (request, context) => {
   const SUPABASE_ANON_KEY = context.env.SUPABASE_ANON_KEY;
 
   const url = new URL(request.url);
-  const path = url.pathname.replace(/^\/oauth-oura/, '/oauth-oura');
+  const path = url.pathname.replace(/^\/oauth-test/, '/oauth-test');
   const targetUrl = `${SUPABASE_URL}/functions/v1${path}${url.search}`;
 
   const init = {
@@ -21,7 +21,7 @@ export default async (request, context) => {
 
   const response = await fetch(targetUrl, init);
   const bodyText = await response.text();
-  const contentType = response.headers.get('Content-Type') || 'text/html; charset=UTF-8';
+  const contentType = response.headers.get('Content-Type') || 'application/json';
 
   return new Response(bodyText, {
     status: response.status,
@@ -33,7 +33,7 @@ export default async (request, context) => {
 };
 
 export const config = {
-  path: ['/oauth-oura', '/oauth-oura/*']
+  path: ['/oauth-test', '/oauth-test/*']
 };
 
 

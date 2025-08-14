@@ -84,6 +84,9 @@ Acceptance Criteria (MVP)
 - `telegram-webhook`: POST updates, `POST /set-webhook`, `GET /healthz`
 - `oauth-oura`: `GET /start`, `GET /callback`
 - `oauth-strava`: `GET /start`, `GET /callback`
+- `data-sync-oura`: POST service-only sync; supports `{ user_id }` for targeted sync; used before briefings
+- `data-sync-strava`: POST service-only sync; supports `{ user_id }` for targeted sync; used before briefings
+- `pre-briefing-sync`: POST service-only cron at :50 past each hour to prefetch per-user data 10 minutes before briefing
 - `oauth-test`: `POST /user-lookup` (service role DB access)
 
 ## 6. Configuration
@@ -93,6 +96,10 @@ Acceptance Criteria (MVP)
 
 ## 7. CI/CD
 - Push to `main` triggers GitHub Actions to deploy all Supabase functions with appropriate flags; Netlify auto-builds proxies + static.
+
+Schedules (configure in Supabase Scheduled Triggers):
+- `daily-briefings`: `0 * * * *` (hourly). Generates briefings for users whose local hour matches `users.briefing_hour`.
+- `pre-briefing-sync`: `50 * * * *` (hourly at :50). Pulls Oura/Strava data for users whose local time is 10 minutes before their `briefing_hour`.
 
 ## 8. Operational Playbooks
 ### 8.1 Telegram webhook set
@@ -104,5 +111,65 @@ Acceptance Criteria (MVP)
 
 ## 9. Change Control
 - Any change affecting routes, proxies, or JWT must update this PRD and `FITLINK_ARCHITECTURE.md`.
+
+## 10. Related Documents & Links
+- Bot Commands: `docs/BOT_COMMANDS.md`
+- Integration Guide: `docs/INTEGRATION_GUIDE.md`
+- Integration Status: `docs/INTEGRATION_STATUS.md`
+- Future Integrations (Roadmap): `docs/FUTURE_INTEGRATIONS.md`
+
+## 11. Bot Commands (MVP Scope & Hook‑up Status)
+- `/start` — welcome + status check [MVP: wire to `telegram-webhook`]
+- `/status` — show connected providers + last sync [MVP]
+- `/connect_oura` — returns OAuth start link [MVP]
+- `/connect_strava` — returns OAuth start link [MVP]
+- `/help` — list commands [MVP]
+- Feedback actions (from dashboard) — deliver to bot inbox [MVP]
+
+See full command list and planned behaviors in `docs/BOT_COMMANDS.md`.
+
+## 12. Integration Status (Executive Summary)
+- Oura: start/callback implemented; storing tokens in `providers`; proxy route in Netlify; config `verify_jwt=false` present.
+- Strava: start/callback implemented similarly; proxy plus config in place.
+- Telegram Webhook: `telegram-webhook` function live; Netlify proxy path `/api/telegram-webhook`.
+- Dashboard: uses `oauth-test/user-lookup` for snapshot; empty-state handling in place when 404/401.
+
+Detailed status with owners and dates: `docs/INTEGRATION_STATUS.md`.
+
+## 13. Integration Guide (Build/Run)
+Follow `docs/INTEGRATION_GUIDE.md` for provider app setup, environment variables, and local testing steps.
+
+## 14. Future Integrations (Roadmap)
+Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. See `docs/FUTURE_INTEGRATIONS.md` for sequence and scoping.
+
+## 15. Known Bugs & Issues
+- Public functions sometimes redeploy without `verify_jwt=false` → 401. Mitigation: configs added; CI uses `--no-verify-jwt`.
+  - Dashboard now calls server via Netlify proxy (`/oauth-test/user-lookup`); no Supabase keys in client. Anon/service role use is confined to server functions.
+- Ensure Netlify Edge proxies use Netlify env for anon key; rotate old keys ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1)).
+- Telegram webhook secret validation disabled; re‑enable once stable via header/secret.
+- Pre‑briefing sync job not yet implemented/scheduled ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9), [#12](https://github.com/paulgosnell/fitlink-bot/issues/12)).
+- Strava data sync function missing ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10)).
+- Token refresh not implemented for Oura/Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11)).
+- Migration history drift previously observed; ensure `supabase migration repair` reflects real state.
+
+## 16. MVP Launch Task List
+  - [ ] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys (oauth proxies already use `SUPABASE_ANON_KEY` env; ensure set in Netlify) ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1))
+  - [x] Remove any service role usage from dashboard client code
+  - [x] Verify CI deploys all public endpoints with JWT disabled and configs included
+  - [x] Re‑enable Telegram webhook secret validation and set webhook to pretty route
+  - [x] Configure Supabase schedules: `daily-briefings` (0 * * * *), `pre-briefing-sync` (50 * * * *) ([#12](https://github.com/paulgosnell/fitlink-bot/issues/12))
+  - [x] Deploy and verify `data-sync-oura` function
+  - [x] Implement, deploy and verify `data-sync-strava` function ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10))
+  - [x] Implement, deploy and verify `pre-briefing-sync` function ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9))
+  - [x] Configure Supabase schedule: daily `data-sync-oura` (03:10 UTC)
+  - [ ] Validate pre-briefing sync pulls Oura/Strava data 10 minutes before each user’s `briefing_hour` (timezone correct) ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9)) — implemented; schedule configured
+  - [x] Validate token refresh and DB update on expiry for Oura and Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11))
+  - [x] Verify initial backfill triggers post-OAuth for both providers
+  - [x] Verify manual sync commands: `/sync_oura`, `/sync_strava` (both call server functions via `BASE_URL`)
+  - [x] Complete `/status` command implementation to surface connection health
+  - [ ] Finish dashboard integration status cards and error handling ([#13](https://github.com/paulgosnell/fitlink-bot/issues/13))
+  - [x] Route dashboard data via Netlify proxy `oauth-test-proxy` and remove Supabase SDK from client
+  - [ ] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s ([#14](https://github.com/paulgosnell/fitlink-bot/issues/14)) — includes token refresh coverage
+  - [ ] Create runbook: rollback, rotate secrets, redeploy ([#15](https://github.com/paulgosnell/fitlink-bot/issues/15))
 
 
