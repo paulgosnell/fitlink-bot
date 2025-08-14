@@ -100,8 +100,8 @@ class FitlinkDashboard {
 				body: JSON.stringify({ telegram_id: userId })
 			});
 
-			// If user not found, treat as authenticated with no data
-			if (response.status === 404) {
+			// If user not found or function requires auth (401), treat as authenticated with no data
+			if (response.status === 404 || response.status === 401) {
 				this.currentUser = { id: null, telegram_id: userId, username: null, first_name: null, last_name: null };
 				this.healthData = { sleep: [], activities: [], summary: this.getEmptyHealthSummary() };
 				await this.checkConnectedProviders();
