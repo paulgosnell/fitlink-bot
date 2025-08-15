@@ -1,58 +1,64 @@
 export default async (request, context) => {
-  const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
-  const SUPABASE_ANON_KEY = context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
-
   try {
+    // Get environment variables with fallbacks
+    const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
+    const SUPABASE_ANON_KEY = 
+      context?.env?.VITE_SUPABASE_ANON_KEY || 
+      context?.env?.SUPABASE_ANON_KEY ||
+      Deno?.env?.get?.('VITE_SUPABASE_ANON_KEY') ||
+      Deno?.env?.get?.('SUPABASE_ANON_KEY') ||
+      '';
+
     if (!SUPABASE_ANON_KEY) {
-      console.error('Missing VITE_SUPABASE_ANON_KEY/SUPABASE_ANON_KEY in Netlify environment');
-      return new Response('Missing VITE_SUPABASE_ANON_KEY environment variable in Netlify. Please set it in Netlify dashboard.', { status: 500 });
+      console.error('Missing SUPABASE_ANON_KEY in environment');
+      return new Response('Missing VITE_SUPABASE_ANON_KEY environment variable', { 
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
 
+    // Build target URL
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/oauth-strava/, '/oauth-strava');
     const targetUrl = `${SUPABASE_URL}/functions/v1${path}${url.search}`;
 
-    const init = {
+    // Proxy the request
+    const response = await fetch(targetUrl, {
       method: request.method,
       headers: {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type': request.headers.get('Content-Type') || 'application/json'
       },
-      redirect: 'manual'
-    };
-
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      init.body = request.body;
-    }
-
-    const response = await fetch(targetUrl, init);
+      redirect: 'manual',
+      body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined
+    });
     
-    // Handle redirects properly
-    if (response.status === 301 || response.status === 302 || response.status === 303 || response.status === 307 || response.status === 308) {
+    // Handle redirects
+    if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get('Location');
       if (location) {
         return Response.redirect(location, response.status);
       }
     }
     
-    const bodyText = await response.text();
-    const contentType = response.headers.get('Content-Type') || 'text/html; charset=UTF-8';
-
-    return new Response(bodyText, {
+    // Return response with proper headers
+    const body = await response.text();
+    return new Response(body, {
       status: response.status,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': response.headers.get('Content-Type') || 'text/html; charset=UTF-8',
         'Cache-Control': 'no-cache'
       }
     });
   } catch (err) {
     console.error('OAuth proxy error:', err);
-    return new Response(`Proxy error: ${err?.message || 'unknown'}`, { status: 500 });
+    return new Response(`Proxy error: ${err?.message || err}`, { 
+      status: 500,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   }
 };
 
 export const config = {
   path: ['/oauth-strava', '/oauth-strava/*']
 };
-
-
