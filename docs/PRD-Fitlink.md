@@ -143,15 +143,23 @@ Follow `docs/INTEGRATION_GUIDE.md` for provider app setup, environment variables
 ## 14. Future Integrations (Roadmap)
 Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. See `docs/FUTURE_INTEGRATIONS.md` for sequence and scoping.
 
-## 15. Known Bugs & Issues
-- Public functions sometimes redeploy without `verify_jwt=false` → 401. Mitigation: configs added; CI uses `--no-verify-jwt`.
-  - Dashboard now calls server via Netlify proxy (`/oauth-test/user-lookup`); no Supabase keys in client. Anon/service role use is confined to server functions.
-- Netlify Edge proxies require `VITE_SUPABASE_ANON_KEY` environment variable (not `SUPABASE_ANON_KEY`) to be set in Netlify dashboard.
-- Telegram webhook secret validation disabled; re‑enable once stable via header/secret.
-- Pre‑briefing sync job not yet implemented/scheduled ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9), [#12](https://github.com/paulgosnell/fitlink-bot/issues/12)).
-- Strava data sync function missing ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10)).
-- Token refresh not implemented for Oura/Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11)).
-- Migration history drift previously observed; ensure `supabase migration repair` reflects real state.
+## 15. Known Bugs & Issues (RESOLVED)
+- ✅ OAuth redirect URI mismatch - FIXED: Hardcoded Netlify URLs in Supabase functions
+- ✅ HTML showing as plain text - FIXED: Proxy detects and fixes Content-Type headers
+- ✅ Uncaught exceptions in Edge Functions - FIXED: Multiple env var access methods
+- ✅ Public functions sometimes redeploy without `verify_jwt=false` → 401. Mitigation: configs added; CI uses `--no-verify-jwt`.
+- ✅ Dashboard now calls server via Netlify proxy (`/oauth-test/user-lookup`); no Supabase keys in client.
+- ✅ Netlify Edge proxies require `VITE_SUPABASE_ANON_KEY` environment variable set in Netlify dashboard.
+- ✅ Pre‑briefing sync job implemented/scheduled ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9), [#12](https://github.com/paulgosnell/fitlink-bot/issues/12)).
+- ✅ Strava data sync function added ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10)).
+- ✅ Token refresh implemented for Oura/Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11)).
+
+## 15.1 Critical OAuth Requirements (DO NOT BREAK)
+- **Netlify Proxy Pattern**: ALL OAuth flows MUST go through Netlify Edge Function proxies
+- **Hardcoded URLs**: NEVER use BASE_URL env var; always hardcode `https://fitlinkbot.netlify.app`
+- **Content-Type Detection**: Proxies MUST detect HTML and override Content-Type header
+- **Environment Variables**: Use VITE_SUPABASE_ANON_KEY with multiple access methods
+- **Redirect Handling**: Must use `redirect: 'manual'` and handle 3xx status codes
 
 ## 16. MVP Launch Task List
   - [x] Replace hardcoded anon key in Netlify Edge proxies with env var; rotate keys (oauth proxies use `VITE_SUPABASE_ANON_KEY` env from Netlify) ([#1](https://github.com/paulgosnell/fitlink-bot/issues/1))

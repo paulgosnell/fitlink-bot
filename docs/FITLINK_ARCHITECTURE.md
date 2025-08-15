@@ -110,8 +110,8 @@ Telegram Bot → Web OAuth → Authorization → Success Page → Back to Telegr
 
 ### **6. Adding New Provider Integrations (Whoop, Garmin, etc.)**
 
-#### **OAuth Integration Pattern**
-All new health/fitness providers should follow the established two-layer pattern:
+#### **🚨 CRITICAL: OAuth Integration Pattern - DO NOT DEVIATE 🚨**
+All new health/fitness providers MUST follow this EXACT pattern. Any deviation will break the OAuth flow.
 
 ```
 User clicks "Connect [Provider]" 
@@ -133,13 +133,46 @@ Shows success page: "✅ [Provider] Connected!"
 Opens Telegram: https://t.me/the_fitlink_bot?start=status
 ```
 
+**⚠️ COMMON MISTAKES THAT BREAK OAUTH:**
+1. ❌ Using BASE_URL from environment variables (MUST hardcode fitlinkbot.netlify.app)
+2. ❌ Setting redirect_uri to Supabase URL (MUST use Netlify URL)
+3. ❌ Missing Content-Type detection in proxy (HTML shows as plain text)
+4. ❌ Not handling redirects with `redirect: 'manual'` (OAuth flow fails)
+5. ❌ Using only one env var access method (causes "uncaught exception")
+6. ❌ Forgetting CORS headers (dashboard can't access API)
+
 #### **Required Components for New Providers**
 
-**1. Supabase Edge Function:** `supabase/functions/oauth-[provider]/index.ts`
-- OAuth start endpoint (generates authorization URL)
-- OAuth callback endpoint (handles token exchange)
-- Success/error HTML pages with Telegram redirect
-- Debug logging for troubleshooting
+**1. Netlify Edge Function Proxy:** `netlify/edge-functions/oauth-[provider]-proxy.js`
+```javascript
+// COPY EXACTLY FROM oauth-oura-proxy.js - DO NOT MODIFY THE PATTERN
+// Only change: replace 'oauth-oura' with 'oauth-[provider]' in path replacements
+```
+
+**2. Supabase Edge Function:** `supabase/functions/oauth-[provider]/index.ts`
+```typescript
+// CRITICAL: OAuth URLs MUST use Netlify URLs
+const baseUrl = "https://fitlinkbot.netlify.app"; // NEVER use BASE_URL env var
+const redirectUri = `${baseUrl}/oauth-[provider]/callback`;
+
+// Start endpoint - generates authorization URL
+if (path.endsWith('/start')) {
+  // Build OAuth URL with Netlify callback
+  return Response.redirect(providerAuthUrl);
+}
+
+// Callback endpoint - exchange code for tokens
+if (path.endsWith('/callback')) {
+  // Exchange code with SAME redirectUri used in /start
+  // Return HTML with Telegram deep link
+  return new Response(successHtml, {
+    headers: { 
+      ...corsHeaders, 
+      'Content-Type': 'text/html; charset=UTF-8' // CRITICAL
+    }
+  });
+}
+```
 
 **2. Database Integration:**
 - Uses existing `providers` table with provider-specific `provider` field
@@ -177,32 +210,35 @@ Opens Telegram: https://t.me/the_fitlink_bot?start=status
 - Data: Training sessions, physical info, sleep
 - Tables: `polar_exercises`, `polar_sleep`, `polar_physical`
 
-#### **Integration Checklist**
+#### **Integration Checklist - MUST COMPLETE ALL**
 
-**Setup Requirements:**
-- [ ] Register developer application with provider
-- [ ] Configure redirect URI: `https://fitlinkbot.netlify.app/oauth-[provider]/callback`
-- [ ] Add client credentials to Supabase secrets
-- [ ] Create database tables for provider data
+**🔴 Critical Setup (Breaking if Wrong):**
+- [ ] Register app with EXACT redirect URI: `https://fitlinkbot.netlify.app/oauth-[provider]/callback`
+- [ ] Add `VITE_SUPABASE_ANON_KEY` to Netlify environment variables
+- [ ] Copy `oauth-oura-proxy.js` EXACTLY (only change provider name in paths)
+- [ ] Hardcode `baseUrl = "https://fitlinkbot.netlify.app"` in Supabase function
+- [ ] Add to `netlify.toml`: `[[edge_functions]] function = "oauth-[provider]-proxy" path = "/oauth-[provider]/*"`
 
-**Function Development:**
-- [ ] Copy oauth-oura structure as template
-- [ ] Update provider-specific OAuth URLs and parameters
-- [ ] Implement token exchange with correct redirect_uri
-- [ ] Add provider-specific error handling
-- [ ] Test OAuth flow end-to-end
+**🟡 Function Development:**
+- [ ] Create Netlify proxy: `netlify/edge-functions/oauth-[provider]-proxy.js`
+- [ ] Create Supabase function: `supabase/functions/oauth-[provider]/`
+- [ ] Add `config.toml` with `verify_jwt = false`
+- [ ] Test env var access works (VITE_SUPABASE_ANON_KEY)
+- [ ] Test redirect handling (302 responses)
+- [ ] Test HTML rendering (not plain text)
 
-**Bot Integration:**
+**🟢 Standard Integration:**
 - [ ] Add connect command to Telegram handler
 - [ ] Update status command to include new provider
 - [ ] Create data sync function
 - [ ] Add provider to daily briefing AI prompts
 
-**Deployment:**
-- [ ] Test OAuth flow in development
-- [ ] Deploy via GitHub Actions
-- [ ] Verify production OAuth callback works
-- [ ] Test data sync and briefing integration
+**✅ Verification Steps:**
+1. Click connect link → Should redirect to provider
+2. Authorize → Should redirect back to Netlify
+3. Success page → Should show HTML (not raw code)
+4. Auto-redirect → Should open Telegram with status
+5. Check tokens → Should be stored encrypted in DB
 
 ## 🛠️ DEPLOYMENT PROCESS
 
@@ -251,39 +287,101 @@ git push origin main  # GitHub Actions deploys automatically
 5. Supabase function processes with proper authentication
 6. **CRITICAL**: Proxy preserves response Content-Type headers for proper HTML rendering
 
-#### **Netlify Edge Function Configuration**
+#### **Netlify Edge Function Configuration - CRITICAL FOR ALL INTEGRATIONS**
+
+**⚠️ NEVER MODIFY WITHOUT UNDERSTANDING - THIS PATTERN IS REQUIRED FOR ALL OAUTH PROVIDERS ⚠️**
+
 ```javascript
 // netlify/edge-functions/oauth-[provider]-proxy.js
 export default async (request, context) => {
-  const SUPABASE_ANON_KEY = context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
-  
-  // Forward with auth header
-  const response = await fetch(targetUrl, {
-    headers: {
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': request.headers.get('Content-Type') || 'application/json'
-    },
-    redirect: 'manual' // Pass through 302 redirects
-  });
+  try {
+    // CRITICAL: Environment variable access - MUST support all methods
+    const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
+    const SUPABASE_ANON_KEY = 
+      context?.env?.VITE_SUPABASE_ANON_KEY || 
+      context?.env?.SUPABASE_ANON_KEY ||
+      Deno?.env?.get?.('VITE_SUPABASE_ANON_KEY') ||
+      Deno?.env?.get?.('SUPABASE_ANON_KEY') ||
+      '';
 
-  // CRITICAL: Preserve Content-Type for HTML responses
-  const responseData = await response.text();
-  const contentType = response.headers.get('Content-Type') || 'text/html';
-  
-  return new Response(responseData, {
-    status: response.status,
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': 'no-cache' // Prevent caching issues
+    if (!SUPABASE_ANON_KEY) {
+      return new Response('Missing VITE_SUPABASE_ANON_KEY environment variable', { 
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
-  });
+
+    // Build target URL - MUST proxy to Supabase Edge Function
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/^\/oauth-[provider]/, '/oauth-[provider]');
+    const targetUrl = `${SUPABASE_URL}/functions/v1${path}${url.search}`;
+
+    // Proxy the request with auth header
+    const response = await fetch(targetUrl, {
+      method: request.method,
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': request.headers.get('Content-Type') || 'application/json'
+      },
+      redirect: 'manual' // CRITICAL: Must be manual to handle redirects
+    });
+    
+    // CRITICAL: Handle OAuth redirects (302) properly
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('Location');
+      if (location) {
+        return Response.redirect(location, response.status);
+      }
+    }
+    
+    // CRITICAL: Fix Content-Type for HTML responses
+    const contentType = response.headers.get('Content-Type') || '';
+    const body = await response.text();
+    
+    const headers = new Headers();
+    
+    // Preserve CORS headers
+    const corsHeaders = ['Access-Control-Allow-Origin', 'Access-Control-Allow-Headers'];
+    corsHeaders.forEach(header => {
+      const value = response.headers.get(header);
+      if (value) headers.set(header, value);
+    });
+    
+    // CRITICAL: Detect and fix HTML Content-Type
+    if (contentType.includes('text/html') || body.trim().startsWith('<!DOCTYPE html>')) {
+      headers.set('Content-Type', 'text/html; charset=UTF-8');
+    } else {
+      headers.set('Content-Type', contentType || 'text/plain');
+    }
+    
+    headers.set('Cache-Control', 'no-cache');
+    
+    return new Response(body, {
+      status: response.status,
+      headers
+    });
+  } catch (err) {
+    console.error('OAuth proxy error:', err);
+    return new Response(`Proxy error: ${err?.message || err}`, { 
+      status: 500,
+      headers: { 'Content-Type': 'text/plain' }
+    });
+  }
 };
 
-// CRITICAL: Path configuration
+// CRITICAL: Path configuration MUST match netlify.toml
 export const config = {
-  path: ["/oauth-[provider]", "/oauth-[provider]/*"]
+  path: ['/oauth-[provider]', '/oauth-[provider]/*']
 };
 ```
+
+**🚨 CRITICAL REQUIREMENTS FOR OAUTH PROXIES:**
+1. **Environment Variables**: MUST check both `VITE_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY`
+2. **Multiple Access Methods**: MUST try `context.env` AND `Deno.env.get` for compatibility
+3. **Redirect Handling**: MUST use `redirect: 'manual'` and handle 3xx status codes
+4. **Content-Type Fix**: MUST detect HTML and override Content-Type (Supabase bug workaround)
+5. **CORS Headers**: MUST preserve Access-Control headers from Supabase
+6. **Error Handling**: MUST wrap everything in try/catch to prevent uncaught exceptions
 
 #### **Netlify Configuration (netlify.toml)**
 ```toml
@@ -439,6 +537,30 @@ Root Cause: Missing environment variable in Netlify
 2. ✅ Ensure `VITE_SUPABASE_ANON_KEY` is set (not just `SUPABASE_ANON_KEY`)
 3. ✅ Verify the anon key value is correct and not expired
 4. ✅ Edge functions should use: `context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY`
+
+### **Problem: OAuth Shows HTML as Plain Text**
+```
+Symptoms: Success page shows raw HTML code instead of rendering
+Root Cause: Content-Type header is text/plain instead of text/html
+```
+
+**Solution Checklist:**
+1. ✅ Proxy MUST detect HTML content: `body.trim().startsWith('<!DOCTYPE html>')`
+2. ✅ Force Content-Type when HTML detected: `headers.set('Content-Type', 'text/html; charset=UTF-8')`
+3. ✅ Supabase function must return with: `'Content-Type': 'text/html; charset=UTF-8'`
+4. ✅ Never trust Content-Type from upstream - always verify and fix
+
+### **Problem: OAuth Redirect URI Mismatch**
+```
+Symptoms: "redirect uri not found in application redirect URIs"
+Root Cause: Using Supabase URL instead of Netlify URL
+```
+
+**Solution Checklist:**
+1. ✅ NEVER use BASE_URL environment variable
+2. ✅ ALWAYS hardcode: `const baseUrl = "https://fitlinkbot.netlify.app"`
+3. ✅ Provider app settings must have: `https://fitlinkbot.netlify.app/oauth-[provider]/callback`
+4. ✅ Both /start and token exchange must use SAME redirect URI
 
 ---
 
