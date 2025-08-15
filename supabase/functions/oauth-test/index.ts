@@ -1,5 +1,57 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
+
+// Validate Telegram WebApp initData
+function validateTelegramWebAppData(initData: string, botToken: string): { isValid: boolean; userData?: any } {
+  try {
+    const urlParams = new URLSearchParams(initData);
+    const hash = urlParams.get('hash');
+    if (!hash) return { isValid: false };
+
+    // Remove hash from params for validation
+    urlParams.delete('hash');
+
+    // Sort parameters and create data-check-string
+    const sortedParams = Array.from(urlParams.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+
+    // Create secret key: HMAC-SHA-256(bot_token, "WebAppData")
+    const secretKey = hmac("sha256", "WebAppData", botToken, "utf8", "hex");
+    
+    // Calculate expected hash: HMAC-SHA-256(data_check_string, secret_key)
+    const expectedHash = hmac("sha256", secretKey, sortedParams, "utf8", "hex");
+
+    if (hash !== expectedHash) {
+      return { isValid: false };
+    }
+
+    // Check auth_date (within last 24 hours)
+    const authDate = urlParams.get('auth_date');
+    if (authDate) {
+      const authTimestamp = parseInt(authDate) * 1000;
+      const now = Date.now();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (now - authTimestamp > maxAge) {
+        return { isValid: false };
+      }
+    }
+
+    // Parse user data
+    const userParam = urlParams.get('user');
+    if (!userParam) return { isValid: false };
+
+    const userData = JSON.parse(userParam);
+    return { isValid: true, userData };
+
+  } catch (error) {
+    console.error('Telegram validation error:', error);
+    return { isValid: false };
+  }
+}
 
 serve(async (req) => {
   const corsHeaders = {
@@ -16,14 +68,34 @@ serve(async (req) => {
     
     // Database lookup endpoint for dashboard
     if (url.pathname.endsWith('/user-lookup') && req.method === 'POST') {
-      const { telegram_id } = await req.json();
+      const body = await req.json();
+      const { telegram_auth_data } = body;
       
-      if (!telegram_id) {
-        return new Response(JSON.stringify({ error: 'Missing telegram_id' }), {
+      if (!telegram_auth_data) {
+        return new Response(JSON.stringify({ error: 'Missing telegram_auth_data' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
+
+      // Validate Telegram WebApp data
+      const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+      if (!botToken) {
+        return new Response(JSON.stringify({ error: 'Bot token not configured' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const validation = validateTelegramWebAppData(telegram_auth_data, botToken);
+      if (!validation.isValid || !validation.userData) {
+        return new Response(JSON.stringify({ error: 'Invalid Telegram authentication' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const telegramId = validation.userData.id;
 
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
@@ -34,17 +106,17 @@ serve(async (req) => {
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('telegram_id', telegram_id)
+        .eq('telegram_id', telegramId)
         .single();
 
       if (userError || !user) {
-        return new Response(JSON.stringify({ error: 'User not found', telegram_id }), {
+        return new Response(JSON.stringify({ error: 'User not found', telegram_id: telegramId }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // Get user's health data
+      // Get user's health data and providers
       const [sleepData, activityData, providers] = await Promise.all([
         supabase
           .from('oura_sleep')
@@ -86,8 +158,9 @@ serve(async (req) => {
       });
     }
 
-    // Debug environment variables
+    // Debug environment variables (for GET requests)
     const envCheck = {
+      TELEGRAM_BOT_TOKEN: Deno.env.get("TELEGRAM_BOT_TOKEN") ? "SET" : "NOT_SET",
       OURA_CLIENT_ID: Deno.env.get("OURA_CLIENT_ID") ? "SET" : "NOT_SET",
       OURA_CLIENT_SECRET: Deno.env.get("OURA_CLIENT_SECRET") ? "SET" : "NOT_SET",
       STRAVA_CLIENT_ID: Deno.env.get("STRAVA_CLIENT_ID") ? "SET" : "NOT_SET", 
@@ -99,13 +172,14 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        message: "Environment variable check",
+        message: "Telegram WebApp authentication service",
         env: envCheck,
         timestamp: new Date().toISOString()
       }, null, 2),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    console.error('OAuth test error:', error);
     return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
