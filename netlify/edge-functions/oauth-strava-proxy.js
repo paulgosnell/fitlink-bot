@@ -10,7 +10,6 @@ export default async (request, context) => {
       '';
 
     if (!SUPABASE_ANON_KEY) {
-      console.error('Missing SUPABASE_ANON_KEY in environment');
       return new Response('Missing VITE_SUPABASE_ANON_KEY environment variable', { 
         status: 500,
         headers: { 'Content-Type': 'text/plain' }
@@ -29,8 +28,7 @@ export default async (request, context) => {
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         'Content-Type': request.headers.get('Content-Type') || 'application/json'
       },
-      redirect: 'manual',
-      body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined
+      redirect: 'manual'
     });
     
     // Handle redirects
@@ -41,14 +39,11 @@ export default async (request, context) => {
       }
     }
     
-    // Return response with proper headers
-    const body = await response.text();
-    return new Response(body, {
+    // Clone the response to preserve headers
+    return new Response(response.body, {
       status: response.status,
-      headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'text/html; charset=UTF-8',
-        'Cache-Control': 'no-cache'
-      }
+      statusText: response.statusText,
+      headers: response.headers
     });
   } catch (err) {
     console.error('OAuth proxy error:', err);
