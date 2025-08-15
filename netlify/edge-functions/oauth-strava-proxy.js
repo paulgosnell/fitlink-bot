@@ -39,11 +39,32 @@ export default async (request, context) => {
       }
     }
     
-    // Clone the response to preserve headers
-    return new Response(response.body, {
+    // For HTML responses, we need to read the body and set headers explicitly
+    const contentType = response.headers.get('Content-Type') || '';
+    const body = await response.text();
+    
+    // Create new headers object
+    const headers = new Headers();
+    
+    // Copy CORS headers
+    const corsHeaders = ['Access-Control-Allow-Origin', 'Access-Control-Allow-Headers'];
+    corsHeaders.forEach(header => {
+      const value = response.headers.get(header);
+      if (value) headers.set(header, value);
+    });
+    
+    // Set Content-Type explicitly
+    if (contentType.includes('text/html') || body.trim().startsWith('<!DOCTYPE html>')) {
+      headers.set('Content-Type', 'text/html; charset=UTF-8');
+    } else {
+      headers.set('Content-Type', contentType || 'text/plain');
+    }
+    
+    headers.set('Cache-Control', 'no-cache');
+    
+    return new Response(body, {
       status: response.status,
-      statusText: response.statusText,
-      headers: response.headers
+      headers
     });
   } catch (err) {
     console.error('OAuth proxy error:', err);
