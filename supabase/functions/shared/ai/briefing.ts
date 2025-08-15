@@ -143,8 +143,45 @@ async function getSleepTrends(supabase: SupabaseClient, userId: string) {
     .single();
 
   if (error) {
-    console.warn("No sleep data found:", error);
-    return undefined;
+    console.warn("No sleep data found in view, trying direct table query:", error);
+    
+    // Fallback to querying oura_sleep table directly
+    const { data: directData, error: directError } = await supabase
+      .from('oura_sleep')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (directError) {
+      console.warn("No sleep data found in direct table query:", directError);
+      return undefined;
+    }
+    
+    console.log("Found sleep data via direct query:", directData?.date);
+    
+    // Transform direct data to match view format
+    return {
+      user_id: userId,
+      last_sleep_date: directData.date,
+      total_sleep_minutes: directData.total_sleep_minutes,
+      sleep_efficiency: directData.sleep_efficiency,
+      hrv_avg: directData.hrv_avg,
+      resting_heart_rate: directData.resting_heart_rate,
+      temperature_deviation: directData.temperature_deviation,
+      readiness_score: directData.readiness_score,
+      // Set averages to current values as fallback
+      avg_sleep_minutes: directData.total_sleep_minutes,
+      avg_sleep_efficiency: directData.sleep_efficiency,
+      avg_hrv: directData.hrv_avg,
+      avg_rhr: directData.resting_heart_rate,
+      avg_temp_dev: directData.temperature_deviation,
+      avg_readiness: directData.readiness_score,
+      hrv_trend: 'stable',
+      rhr_trend: 'stable',
+      readiness_change: 0
+    };
   }
 
   return data;
