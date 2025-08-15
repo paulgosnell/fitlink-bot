@@ -106,7 +106,10 @@ export async function createOrUpdateProvider(
     // Create new provider
     const { data, error } = await supabase
       .from('providers')
-      .insert([encryptedData])
+      .insert([{
+        ...encryptedData,
+        is_active: true
+      }])
       .select()
       .single();
 
