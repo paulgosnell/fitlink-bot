@@ -11,6 +11,12 @@ CREATE TABLE IF NOT EXISTS public.users (
     username VARCHAR(255),
     first_name VARCHAR(255),
     last_name VARCHAR(255),
+    timezone TEXT DEFAULT 'UTC',
+    city TEXT,
+    briefing_hour INTEGER DEFAULT 7 CHECK (briefing_hour >= 0 AND briefing_hour <= 23),
+    training_goal TEXT DEFAULT 'general_fitness',
+    is_active BOOLEAN DEFAULT true,
+    paused_until DATE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

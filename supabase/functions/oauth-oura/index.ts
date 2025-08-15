@@ -21,13 +21,19 @@ serve(async (req) => {
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
     
-    console.log('OAuth callback received:', { code: code?.substring(0, 10) + '...', state });
+    console.log('OAuth callback received:', { code: code?.substring(0, 10) + '...', state, fullState: state });
     
     if (code && state) {
       try {
         // Parse state to get user_id
         const [userId, _] = state.split('_');
-        console.log('Parsed user ID:', userId);
+        console.log('Parsed user ID:', userId, 'Type:', typeof userId, 'IsNaN:', isNaN(parseInt(userId)));
+        
+        // Validate userId is a number
+        const telegramId = parseInt(userId);
+        if (isNaN(telegramId)) {
+          throw new Error(`Invalid user ID in state: ${userId}. Expected a number, got: ${typeof userId}`);
+        }
         
         // Exchange code for tokens
         console.log('Exchanging code for tokens...');
@@ -40,8 +46,8 @@ serve(async (req) => {
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
         );
         
-        console.log('Looking up user with Telegram ID:', userId);
-        const user = await getUserByTelegramId(supabase, parseInt(userId));
+        console.log('Looking up user with Telegram ID:', telegramId);
+        const user = await getUserByTelegramId(supabase, telegramId);
         if (!user) {
           console.error('User not found for Telegram ID:', userId);
           throw new Error('User not found');
