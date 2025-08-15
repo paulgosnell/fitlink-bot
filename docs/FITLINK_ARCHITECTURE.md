@@ -574,3 +574,42 @@ Root Cause: Using Supabase URL instead of Netlify URL
 7. **Adding new provider?** → Follow the established OAuth integration pattern and checklist
 
 **🚨 ALWAYS REFERENCE THIS DOCUMENT BEFORE ARCHITECTURAL CHANGES 🚨**
+
+---
+
+## 🤖 **CRITICAL: TELEGRAM BOT LOOP PREVENTION**
+
+### **The Problem**
+Without proper bot detection, the Telegram bot will respond to its own messages, creating an infinite loop:
+1. User: "How did I sleep last night?"
+2. Bot: "Hi! I'm your Fitlink Bot..."
+3. Bot receives its own message as a new update
+4. Bot: "Hi! I'm your Fitlink Bot..."
+5. Infinite loop continues...
+
+### **The Solution**
+**EVERY** Telegram message handler MUST check if the sender is a bot:
+
+```typescript
+// CRITICAL: Ignore messages from bots to prevent infinite loops
+if (message.from?.is_bot) {
+  console.log("Ignoring message from bot:", message.from.username);
+  return;
+}
+```
+
+### **Where This Check Is Required**
+1. `/supabase/functions/shared/telegram/handler.ts` - Main handler (NEW)
+2. `/supabase/functions/shared/telegram.ts` - Legacy handler (OLD)
+3. Any other file that processes Telegram messages
+
+### **Why This Happened**
+- There were TWO different telegram handlers in the codebase
+- The webhook was importing the OLD handler without bot protection
+- Even after adding bot check to one file, the other was still causing loops
+
+### **Prevention**
+1. Always check `is_bot` field before processing any Telegram message
+2. Ensure webhook imports from the correct handler file
+3. Add bot checks to ALL message handlers as defensive programming
+4. Test with actual bot messages to ensure loop prevention works

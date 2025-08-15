@@ -202,6 +202,13 @@ export async function handleTelegramUpdate(
   if (!update.message) return;
 
   const { message } = update;
+  
+  // CRITICAL: Ignore messages from bots to prevent infinite loops
+  if (message.from?.is_bot) {
+    console.log("Ignoring message from bot:", message.from.username);
+    return;
+  }
+  
   const userId = message.from.id;
   const chatId = message.chat.id;
   const text = message.text || "";
