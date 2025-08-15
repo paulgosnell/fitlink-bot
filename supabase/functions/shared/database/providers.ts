@@ -29,13 +29,13 @@ export async function getProviderByUserAndType(
   userId: string,
   provider: 'oura' | 'strava'
 ): Promise<Provider | null> {
+  // Fetch provider rows and interpret `is_active` in JS. This avoids false
+  // negatives when `is_active` is null/undefined or stored non-boolean.
   const { data, error } = await supabase
     .from('providers')
     .select('*')
     .eq('user_id', userId)
-    .eq('provider', provider)
-    .eq('is_active', true)
-    .single();
+    .eq('provider', provider);
 
   if (error) {
     if (error.code === 'PGRST116') {
@@ -44,11 +44,14 @@ export async function getProviderByUserAndType(
     throw error;
   }
 
-  // Decrypt tokens before returning
+  const rows = data || [];
+  const active = rows.find((r: any) => !!r.is_active) || null;
+  if (!active) return null;
+
   return {
-    ...data,
-    access_token: decryptToken(data.access_token),
-    refresh_token: data.refresh_token ? decryptToken(data.refresh_token) : undefined
+    ...active,
+    access_token: decryptToken(active.access_token),
+    refresh_token: active.refresh_token ? decryptToken(active.refresh_token) : undefined
   };
 }
 
@@ -189,13 +192,17 @@ export async function getExpiredProviders(
     .from('providers')
     .select('*')
     .lt('expires_at', now)
-    .eq('is_active', true)
     .not('refresh_token', 'is', null);
+
+  // Only include truthy is_active rows
+  const activeOnly = (data || []).filter((p: any) => !!p.is_active);
+
+  const finalData = activeOnly;
 
   if (error) throw error;
 
   // Decrypt tokens before returning
-  return (data || []).map(provider => ({
+  return finalData.map(provider => ({
     ...provider,
     access_token: decryptToken(provider.access_token),
     refresh_token: provider.refresh_token ? decryptToken(provider.refresh_token) : undefined

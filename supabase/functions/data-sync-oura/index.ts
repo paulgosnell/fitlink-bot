@@ -32,16 +32,20 @@ serve(async (req) => {
       // ignore body parse errors
     }
 
-    // Get active Oura users (optionally targeted)
-    const query = supabase
+    // Get provider rows for Oura (optionally targeted) and compute active
+    // providers in JS. This is robust to cases where `is_active` may be
+    // null/undefined or stored with unexpected types.
+    const baseQuery = supabase
       .from("providers")
-      .select("id, user_id, access_token, refresh_token, expires_at, provider_user_id")
-      .eq("provider", "oura")
-      .eq("is_active", true);
+      .select("id, user_id, access_token, refresh_token, expires_at, provider_user_id, is_active")
+      .eq("provider", "oura");
 
-    const { data: providers, error: providersError } = targetUserId
-      ? await query.eq('user_id', targetUserId)
-      : await query;
+    const { data: providersRows, error: providersError } = targetUserId
+      ? await baseQuery.eq('user_id', targetUserId)
+      : await baseQuery;
+
+    // Filter to truthy is_active values in JS
+    const providers = (providersRows || []).filter((p: any) => !!p.is_active);
 
     if (providersError) {
       console.error("Error fetching Oura providers:", providersError);

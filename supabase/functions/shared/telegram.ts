@@ -530,16 +530,21 @@ async function handleStartCommand(chatId: number, userId: number, supabase: any,
 
     let connectedProviders: string[] = [];
     if (user) {
+      // Fetch all provider rows for the user and interpret activity in JS.
+      // This is more robust if `is_active` is null/undefined or stored with
+      // a non-boolean value in the DB (migration drift, manual edits, etc.).
       const { data: tokens, error: tokensError } = await supabase
         .from("providers")
-        .select("provider")
-        .eq("user_id", user.id)
-        .eq("is_active", true);
-      
+        .select("provider, is_active")
+        .eq("user_id", user.id);
+
       console.log("Provider lookup for user_id:", user.id);
       console.log("Providers found:", { tokens, tokensError });
-      
-      connectedProviders = tokens?.map(t => t.provider) || [];
+
+      // Treat any truthy `is_active` as active; fallback to false otherwise.
+      connectedProviders = (tokens || [])
+        .filter((t: any) => !!t.is_active)
+        .map((t: any) => t.provider);
     }
 
     const ouraConnected = connectedProviders.includes("oura");
@@ -1050,14 +1055,14 @@ async function handleSyncOura(chatId: number, userId: number, supabase: any, bot
       return;
     }
 
-    // Get Oura provider
-    const { data: provider } = await supabase
+    // Get Oura provider (interpret is_active in JS)
+    const { data: ouraRows } = await supabase
       .from("providers")
-      .select("access_token")
+      .select("access_token, is_active")
       .eq("user_id", user.id)
-      .eq("provider", "oura")
-      .eq("is_active", true)
-      .single();
+      .eq("provider", "oura");
+
+    const provider = (ouraRows || []).find((r: any) => !!r.is_active);
 
     if (!provider) {
       await sendTelegramMessage(botToken, chatId, "❌ Oura not connected. Please connect your Oura Ring first.");
@@ -1101,16 +1106,16 @@ async function handleSyncStrava(chatId: number, userId: number, supabase: any, b
       return;
     }
 
-    // Get Strava provider
-    const { data: provider } = await supabase
+    // Get Strava provider (interpret is_active in JS)
+    const { data: stravaRows } = await supabase
       .from("providers")
-      .select("access_token")
+      .select("access_token, is_active")
       .eq("user_id", user.id)
-      .eq("provider", "strava")
-      .eq("is_active", true)
-      .single();
+      .eq("provider", "strava");
 
-    if (!provider) {
+    const stravaProvider = (stravaRows || []).find((r: any) => !!r.is_active);
+
+    if (!stravaProvider) {
       await sendTelegramMessage(botToken, chatId, "❌ Strava not connected. Please connect your Strava account first.");
       return;
     }
@@ -1258,15 +1263,18 @@ async function handleStatusCommand(
     
     console.log("All providers for user:", allProviders);
 
+    // Fetch provider rows and determine active status in JS — this helps
+    // surface cases where `is_active` might be null/incorrectly typed.
     const { data: tokens } = await supabase
       .from("providers")
-      .select("provider")
-      .eq("user_id", user.id)
-      .eq("is_active", true);
+      .select("provider, is_active")
+      .eq("user_id", user.id);
 
-    const connectedProviders = tokens?.map(t => t.provider) || [];
-    
-    console.log("Active providers:", connectedProviders);
+    const connectedProviders = (tokens || [])
+      .filter((t: any) => !!t.is_active)
+      .map((t: any) => t.provider);
+
+    console.log("Active providers (computed):", connectedProviders);
     
     const ouraConnected = connectedProviders.includes("oura");
     const stravaConnected = connectedProviders.includes("strava");

@@ -60,15 +60,18 @@ serve(async (req) => {
       // ignore body parse errors
     }
 
-    const providerFilter = supabase
+    // Fetch provider rows for Strava and compute active providers in JS. This
+    // handles cases where `is_active` may be null or stored inconsistently.
+    const baseFilter = supabase
       .from('providers')
-      .select('id,user_id,access_token,refresh_token,expires_at,provider_user_id')
-      .eq('provider', 'strava')
-      .eq('is_active', true);
+      .select('id,user_id,access_token,refresh_token,expires_at,provider_user_id,is_active')
+      .eq('provider', 'strava');
 
-    const { data: providers, error: providersError } = targetUserId
-      ? await providerFilter.eq('user_id', targetUserId)
-      : await providerFilter;
+    const { data: providerRows, error: providersError } = targetUserId
+      ? await baseFilter.eq('user_id', targetUserId)
+      : await baseFilter;
+
+    const providers = (providerRows || []).filter((p: any) => !!p.is_active);
 
     if (providersError) {
       console.error('Error fetching Strava providers:', providersError);

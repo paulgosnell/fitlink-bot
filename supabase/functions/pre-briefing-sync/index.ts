@@ -28,10 +28,12 @@ serve(async (req) => {
     const now = new Date();
     const utcHour = now.getUTCHours();
 
-    const { data: users, error: usersError } = await supabase
+    // Fetch user rows and interpret is_active in JS to handle null/mis-typed values
+    const { data: usersRows, error: usersError } = await supabase
       .from('users')
-      .select('id, telegram_id, timezone, briefing_hour, paused_until, is_active')
-      .eq('is_active', true);
+      .select('id, telegram_id, timezone, briefing_hour, paused_until, is_active');
+
+    const users = (usersRows || []).filter((u: any) => !!u.is_active);
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
