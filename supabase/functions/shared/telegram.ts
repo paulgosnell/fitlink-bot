@@ -519,19 +519,25 @@ async function handleCommand(
 async function handleStartCommand(chatId: number, userId: number, supabase: any, botToken: string): Promise<void> {
   try {
     // Get user and check connected providers
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from("users")
       .select("id")
       .eq("telegram_id", userId)
       .single();
 
+    console.log("Looking up user for telegram_id:", userId);
+    console.log("User lookup result:", { user, userError });
+
     let connectedProviders: string[] = [];
     if (user) {
-      const { data: tokens } = await supabase
+      const { data: tokens, error: tokensError } = await supabase
         .from("providers")
         .select("provider")
         .eq("user_id", user.id)
         .eq("is_active", true);
+      
+      console.log("Provider lookup for user_id:", user.id);
+      console.log("Providers found:", { tokens, tokensError });
       
       connectedProviders = tokens?.map(t => t.provider) || [];
     }
@@ -1244,6 +1250,14 @@ async function handleStatusCommand(
       return;
     }
 
+    // Debug: Check all providers for this user
+    const { data: allProviders } = await supabase
+      .from("providers")
+      .select("*")
+      .eq("user_id", user.id);
+    
+    console.log("All providers for user:", allProviders);
+
     const { data: tokens } = await supabase
       .from("providers")
       .select("provider")
@@ -1251,6 +1265,8 @@ async function handleStatusCommand(
       .eq("is_active", true);
 
     const connectedProviders = tokens?.map(t => t.provider) || [];
+    
+    console.log("Active providers:", connectedProviders);
     
     const ouraConnected = connectedProviders.includes("oura");
     const stravaConnected = connectedProviders.includes("strava");
