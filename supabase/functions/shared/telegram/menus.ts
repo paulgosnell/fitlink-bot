@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import type { User, TelegramInlineKeyboardMarkup } from "../types.ts";
 import { sendTelegramMarkdownMessage } from "./api.ts";
-import { getProvidersByUserId } from "../database/providers.ts";
+import { getUserProviderStatus } from "../database/provider-status.ts";
 
 export async function showMainMenu(
   botToken: string,
@@ -9,9 +9,9 @@ export async function showMainMenu(
   user: User,
   supabase: SupabaseClient
 ): Promise<void> {
-  const providers = await getProvidersByUserId(supabase, user.id);
-  const hasOura = providers.some(p => p.provider === 'oura' && p.is_active);
-  const hasStrava = providers.some(p => p.provider === 'strava' && p.is_active);
+  const providerStatus = await getUserProviderStatus(supabase, user.id);
+  const hasOura = providerStatus.oura;
+  const hasStrava = providerStatus.strava;
 
   const connectionStatus = [];
   if (hasOura) connectionStatus.push("✅ Oura Ring");

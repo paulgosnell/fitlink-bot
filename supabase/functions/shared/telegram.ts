@@ -1255,35 +1255,18 @@ async function handleStatusCommand(
       return;
     }
 
-    // Debug: Check all providers for this user
-    const { data: allProviders } = await supabase
-      .from("providers")
-      .select("*")
-      .eq("user_id", user.id);
+    // Get provider connection status
+    const { getUserProviderStatus } = await import("./database/provider-status.ts");
+    const providerStatus = await getUserProviderStatus(supabase, user.id);
     
-    console.log("All providers for user:", allProviders);
-
-    // Fetch provider rows and determine active status in JS — this helps
-    // surface cases where `is_active` might be null/incorrectly typed.
-    const { data: tokens } = await supabase
-      .from("providers")
-      .select("provider, is_active")
-      .eq("user_id", user.id);
-
-    const connectedProviders = (tokens || [])
-      .filter((t: any) => !!t.is_active)
-      .map((t: any) => t.provider);
-
-    console.log("Active providers (computed):", connectedProviders);
-    
-    const ouraConnected = connectedProviders.includes("oura");
-    const stravaConnected = connectedProviders.includes("strava");
+    const ouraConnected = providerStatus.oura;
+    const stravaConnected = providerStatus.strava;
     
     const ouraStatus = ouraConnected ? "✅ Connected" : "❌ Not connected";
     const stravaStatus = stravaConnected ? "✅ Connected" : "❌ Not connected";
 
     // Generate appropriate action messages based on connection status
-    let actionMessages = [];
+    let actionMessages: string[] = [];
     
     if (!ouraConnected) {
       actionMessages.push("• Use /connect\\_oura to link your Oura Ring");
