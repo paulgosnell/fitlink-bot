@@ -266,48 +266,80 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
 
   console.log(`Fetching Oura data from ${startDateStr} to ${endDateStr}`);
 
-  // Fetch sleep data
-  const sleepResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_sleep?start_date=${startDateStr}&end_date=${endDateStr}`, {
+  // Fetch sleep sessions (detailed sleep data)
+  const sleepResponse = await fetch(`https://api.ouraring.com/v2/usercollection/sleep?start_date=${startDateStr}&end_date=${endDateStr}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
     },
   });
 
+  // Fetch daily readiness scores
+  const readinessResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=${startDateStr}&end_date=${endDateStr}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  let sleepDataByDate = {};
+  let readinessDataByDate = {};
+
+  // Process sleep sessions
   if (sleepResponse.ok) {
     const sleepData = await sleepResponse.json();
-    console.log(`Found ${sleepData.data?.length || 0} sleep records`);
+    console.log(`Found ${sleepData.data?.length || 0} sleep sessions`);
     
-    // Store sleep data
+    // Group sleep sessions by date (take the main sleep session per day)
     for (const sleep of sleepData.data || []) {
-      const { error } = await supabase
-        .from('oura_sleep')
-        .upsert({
-          user_id: userId,
-          date: sleep.day,
-          total_sleep_minutes: sleep.total_sleep_duration ? Math.round(sleep.total_sleep_duration / 60) : null,
-          sleep_efficiency: sleep.efficiency,
-          deep_sleep_minutes: sleep.deep_sleep_duration ? Math.round(sleep.deep_sleep_duration / 60) : null,
-          light_sleep_minutes: sleep.light_sleep_duration ? Math.round(sleep.light_sleep_duration / 60) : null,
-          rem_sleep_minutes: sleep.rem_sleep_duration ? Math.round(sleep.rem_sleep_duration / 60) : null,
-          awake_minutes: sleep.awake_time ? Math.round(sleep.awake_time / 60) : null,
-          bedtime_start: sleep.bedtime_start,
-          bedtime_end: sleep.bedtime_end,
-          hrv_avg: sleep.average_hrv,
-          resting_heart_rate: sleep.lowest_heart_rate,
-          temperature_deviation: sleep.temperature_deviation,
-          respiratory_rate: sleep.average_breath,
-          readiness_score: sleep.score,
-          raw_data: sleep,
-        }, {
-          onConflict: 'user_id,date'
-        });
-
-      if (error) {
-        console.error('Error storing sleep data:', error);
+      const sleepDate = sleep.bedtime_start.split('T')[0]; // Get date from bedtime
+      if (!sleepDataByDate[sleepDate] || sleep.type === 'long_sleep') {
+        sleepDataByDate[sleepDate] = sleep;
+        console.log(`Sleep data for ${sleepDate}:`, JSON.stringify(sleep, null, 2));
       }
     }
   }
 
-  // Note: Readiness and activity data is included in sleep data response
-  // The readiness_score is stored in the sleep record above
+  // Process readiness scores
+  if (readinessResponse.ok) {
+    const readinessData = await readinessResponse.json();
+    console.log(`Found ${readinessData.data?.length || 0} readiness records`);
+    
+    for (const readiness of readinessData.data || []) {
+      readinessDataByDate[readiness.day] = readiness;
+    }
+  }
+
+  // Combine and store data
+  const allDates = new Set([...Object.keys(sleepDataByDate), ...Object.keys(readinessDataByDate)]);
+  
+  for (const date of allDates) {
+    const sleep = sleepDataByDate[date];
+    const readiness = readinessDataByDate[date];
+    
+    const { error } = await supabase
+      .from('oura_sleep')
+      .upsert({
+        user_id: userId,
+        date: date,
+        total_sleep_minutes: sleep?.total_sleep_duration ? Math.round(sleep.total_sleep_duration / 60) : null,
+        sleep_efficiency: sleep?.efficiency || (sleep?.sleep_score_efficiency ? sleep.sleep_score_efficiency : null),
+        deep_sleep_minutes: sleep?.deep_sleep_duration ? Math.round(sleep.deep_sleep_duration / 60) : null,
+        light_sleep_minutes: sleep?.light_sleep_duration ? Math.round(sleep.light_sleep_duration / 60) : null,
+        rem_sleep_minutes: sleep?.rem_sleep_duration ? Math.round(sleep.rem_sleep_duration / 60) : null,
+        awake_minutes: sleep?.awake_time ? Math.round(sleep.awake_time / 60) : null,
+        bedtime_start: sleep?.bedtime_start,
+        bedtime_end: sleep?.bedtime_end,
+        hrv_avg: sleep?.heart_rate?.average_hrv || sleep?.average_hrv,
+        resting_heart_rate: sleep?.heart_rate?.resting || sleep?.lowest_heart_rate,
+        temperature_deviation: sleep?.temperature_deviation,
+        respiratory_rate: sleep?.respiratory_rate?.average || sleep?.average_breath,
+        readiness_score: readiness?.score,
+        raw_data: { sleep, readiness },
+      }, {
+        onConflict: 'user_id,date'
+      });
+
+    if (error) {
+      console.error(`Error storing data for ${date}:`, error);
+    }
+  }
 }

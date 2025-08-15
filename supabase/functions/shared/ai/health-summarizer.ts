@@ -91,9 +91,20 @@ export async function generateHealthSummary(
 async function analyzeRecentTrends(sleepData: any[], activityData: any[]): Promise<RecentTrends> {
   // Analyze last 3 days of sleep
   const recentSleep = sleepData.slice(0, 3);
-  const sleepEfficiencies = recentSleep.map(s => s.sleep_efficiency || 0);
+  
+  // Extract values with fallback to raw_data if structured fields are null
+  const sleepEfficiencies = recentSleep.map(s => {
+    if (s.sleep_efficiency) return s.sleep_efficiency;
+    // Fallback to readiness contributors if available
+    if (s.raw_data?.readiness?.contributors?.efficiency) return s.raw_data.readiness.contributors.efficiency;
+    return 0;
+  });
+  
   const hrvValues = recentSleep.map(s => s.hrv_avg || 0).filter(h => h > 0);
   const rhrValues = recentSleep.map(s => s.resting_heart_rate || 0).filter(r => r > 0);
+  
+  // Use readiness scores as backup for sleep analysis
+  const readinessScores = recentSleep.map(s => s.readiness_score || 0).filter(r => r > 0);
 
   // Calculate trends
   const sleepTrend = calculateTrend(sleepEfficiencies);
