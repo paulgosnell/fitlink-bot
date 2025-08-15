@@ -47,9 +47,16 @@ serve(async (req) => {
         );
         
         console.log('Looking up user with Telegram ID:', telegramId);
-        const user = await getUserByTelegramId(supabase, telegramId);
+        let user;
+        try {
+          user = await getUserByTelegramId(supabase, telegramId);
+        } catch (dbError) {
+          console.error('Database error in getUserByTelegramId:', dbError);
+          throw new Error(`Database lookup failed: ${dbError.message}`);
+        }
+        
         if (!user) {
-          console.error('User not found for Telegram ID:', userId);
+          console.error('User not found for Telegram ID:', telegramId);
           throw new Error('User not found');
         }
         console.log('User found:', { id: user.id, telegram_id: user.telegram_id });
