@@ -264,22 +264,61 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
   const endDateStr = endDate.toISOString().split('T')[0];
   const startDateStr = startDate.toISOString().split('T')[0];
 
-  console.log(`Fetching Oura data from ${startDateStr} to ${endDateStr}`);
+  console.log(`Fetching comprehensive Oura data from ${startDateStr} to ${endDateStr}`);
 
-  // Fetch sleep sessions (detailed sleep data)
-  const sleepResponse = await fetch(`https://api.ouraring.com/v2/usercollection/sleep?start_date=${startDateStr}&end_date=${endDateStr}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
+  const authHeaders = {
+    'Authorization': `Bearer ${accessToken}`,
+  };
 
-  // Fetch daily readiness scores
-  const readinessResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=${startDateStr}&end_date=${endDateStr}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
+  // Fetch all Oura data endpoints in parallel
+  const [
+    sleepResponse,
+    readinessResponse,
+    activityResponse,
+    stressResponse,
+    heartRateResponse,
+    spo2Response,
+    temperatureResponse,
+    workoutResponse,
+    sessionResponse
+  ] = await Promise.all([
+    fetch(`https://api.ouraring.com/v2/usercollection/sleep?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/daily_activity?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/daily_stress?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/heartrate?start_datetime=${startDateStr}T00:00:00&end_datetime=${endDateStr}T23:59:59`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/daily_spo2?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/temperature?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/workouts?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders }),
+    fetch(`https://api.ouraring.com/v2/usercollection/sessions?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders })
+  ]);
 
+  // Process sleep data
+  await processSleepData(supabase, userId, sleepResponse, readinessResponse);
+  
+  // Process daily activity data
+  await processDailyActivity(supabase, userId, activityResponse);
+  
+  // Process daily stress data
+  await processDailyStress(supabase, userId, stressResponse);
+  
+  // Process heart rate data
+  await processHeartRate(supabase, userId, heartRateResponse);
+  
+  // Process SPO2 data
+  await processSPO2(supabase, userId, spo2Response);
+  
+  // Process temperature data
+  await processTemperature(supabase, userId, temperatureResponse);
+  
+  // Process workout data
+  await processWorkouts(supabase, userId, workoutResponse);
+  
+  // Process session data
+  await processSessions(supabase, userId, sessionResponse);
+}
+
+async function processSleepData(supabase: any, userId: string, sleepResponse: Response, readinessResponse: Response) {
   let sleepDataByDate = {};
   let readinessDataByDate = {};
 
@@ -293,7 +332,6 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
       const sleepDate = sleep.bedtime_start.split('T')[0]; // Get date from bedtime
       if (!sleepDataByDate[sleepDate] || sleep.type === 'long_sleep') {
         sleepDataByDate[sleepDate] = sleep;
-        console.log(`Sleep data for ${sleepDate}:`, JSON.stringify(sleep, null, 2));
       }
     }
   }
@@ -308,7 +346,7 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
     }
   }
 
-  // Combine and store data
+  // Combine and store sleep data
   const allDates = new Set([...Object.keys(sleepDataByDate), ...Object.keys(readinessDataByDate)]);
   
   for (const date of allDates) {
@@ -339,7 +377,232 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
       });
 
     if (error) {
-      console.error(`Error storing data for ${date}:`, error);
+      console.error(`Error storing sleep data for ${date}:`, error);
+    }
+  }
+}
+
+async function processDailyActivity(supabase: any, userId: string, activityResponse: Response) {
+  if (!activityResponse.ok) {
+    console.warn(`Daily activity fetch failed: ${activityResponse.status}`);
+    return;
+  }
+
+  const activityData = await activityResponse.json();
+  console.log(`Found ${activityData.data?.length || 0} daily activity records`);
+
+  for (const activity of activityData.data || []) {
+    const { error } = await supabase
+      .from('oura_daily_activity')
+      .upsert({
+        user_id: userId,
+        date: activity.day,
+        activity_score: activity.score,
+        steps: activity.steps,
+        active_calories: activity.active_calories,
+        total_calories: activity.total_calories,
+        target_calories: activity.target_calories,
+        equivalent_walking_distance: activity.equivalent_walking_distance,
+        high_activity_minutes: activity.high_activity_minutes,
+        medium_activity_minutes: activity.medium_activity_minutes,
+        low_activity_minutes: activity.low_activity_minutes,
+        non_wear_minutes: activity.non_wear_minutes,
+        rest_minutes: activity.rest_minutes,
+        inactive_minutes: activity.inactive_minutes,
+        inactivity_alerts: activity.inactivity_alerts,
+        average_met: activity.average_met,
+        met_1min: activity.met_1min,
+        raw_data: activity,
+      }, {
+        onConflict: 'user_id,date'
+      });
+
+    if (error) {
+      console.error(`Error storing activity data for ${activity.day}:`, error);
+    }
+  }
+}
+
+async function processDailyStress(supabase: any, userId: string, stressResponse: Response) {
+  if (!stressResponse.ok) {
+    console.warn(`Daily stress fetch failed: ${stressResponse.status}`);
+    return;
+  }
+
+  const stressData = await stressResponse.json();
+  console.log(`Found ${stressData.data?.length || 0} daily stress records`);
+
+  for (const stress of stressData.data || []) {
+    const { error } = await supabase
+      .from('oura_daily_stress')
+      .upsert({
+        user_id: userId,
+        date: stress.day,
+        stress_high: stress.stress_high,
+        stress_recovery: stress.stress_recovery,
+        stress_day_summary: stress.day_summary,
+        raw_data: stress,
+      }, {
+        onConflict: 'user_id,date'
+      });
+
+    if (error) {
+      console.error(`Error storing stress data for ${stress.day}:`, error);
+    }
+  }
+}
+
+async function processHeartRate(supabase: any, userId: string, heartRateResponse: Response) {
+  if (!heartRateResponse.ok) {
+    console.warn(`Heart rate fetch failed: ${heartRateResponse.status}`);
+    return;
+  }
+
+  const heartRateData = await heartRateResponse.json();
+  console.log(`Found ${heartRateData.data?.length || 0} heart rate records`);
+
+  // Insert heart rate data in batches to avoid too many individual queries
+  const batchSize = 100;
+  const heartRateRecords = heartRateData.data || [];
+  
+  for (let i = 0; i < heartRateRecords.length; i += batchSize) {
+    const batch = heartRateRecords.slice(i, i + batchSize);
+    const records = batch.map(hr => ({
+      user_id: userId,
+      timestamp: hr.timestamp,
+      heart_rate: hr.bpm,
+      source: hr.source,
+      raw_data: hr,
+    }));
+
+    const { error } = await supabase
+      .from('oura_heart_rate')
+      .upsert(records);
+
+    if (error) {
+      console.error(`Error storing heart rate batch ${i}-${i + batch.length}:`, error);
+    }
+  }
+}
+
+async function processSPO2(supabase: any, userId: string, spo2Response: Response) {
+  if (!spo2Response.ok) {
+    console.warn(`SPO2 fetch failed: ${spo2Response.status}`);
+    return;
+  }
+
+  const spo2Data = await spo2Response.json();
+  console.log(`Found ${spo2Data.data?.length || 0} SPO2 records`);
+
+  for (const spo2 of spo2Data.data || []) {
+    const { error } = await supabase
+      .from('oura_daily_spo2')
+      .upsert({
+        user_id: userId,
+        date: spo2.day,
+        spo2_percentage: spo2.spo2_percentage,
+        raw_data: spo2,
+      }, {
+        onConflict: 'user_id,date'
+      });
+
+    if (error) {
+      console.error(`Error storing SPO2 data for ${spo2.day}:`, error);
+    }
+  }
+}
+
+async function processTemperature(supabase: any, userId: string, temperatureResponse: Response) {
+  if (!temperatureResponse.ok) {
+    console.warn(`Temperature fetch failed: ${temperatureResponse.status}`);
+    return;
+  }
+
+  const temperatureData = await temperatureResponse.json();
+  console.log(`Found ${temperatureData.data?.length || 0} temperature records`);
+
+  for (const temp of temperatureData.data || []) {
+    const { error } = await supabase
+      .from('oura_temperature')
+      .upsert({
+        user_id: userId,
+        date: temp.day,
+        temperature_deviation: temp.temperature_deviation,
+        temperature_trend_deviation: temp.temperature_trend_deviation,
+        raw_data: temp,
+      }, {
+        onConflict: 'user_id,date'
+      });
+
+    if (error) {
+      console.error(`Error storing temperature data for ${temp.day}:`, error);
+    }
+  }
+}
+
+async function processWorkouts(supabase: any, userId: string, workoutResponse: Response) {
+  if (!workoutResponse.ok) {
+    console.warn(`Workouts fetch failed: ${workoutResponse.status}`);
+    return;
+  }
+
+  const workoutData = await workoutResponse.json();
+  console.log(`Found ${workoutData.data?.length || 0} workout records`);
+
+  for (const workout of workoutData.data || []) {
+    const { error } = await supabase
+      .from('oura_workouts')
+      .upsert({
+        user_id: userId,
+        external_id: workout.id,
+        activity: workout.activity,
+        start_datetime: workout.start_datetime,
+        end_datetime: workout.end_datetime,
+        intensity: workout.intensity,
+        load: workout.load,
+        average_heart_rate: workout.average_heart_rate,
+        max_heart_rate: workout.max_heart_rate,
+        calories: workout.calories,
+        day: workout.day,
+        raw_data: workout,
+      }, {
+        onConflict: 'user_id,external_id'
+      });
+
+    if (error) {
+      console.error(`Error storing workout data for ${workout.id}:`, error);
+    }
+  }
+}
+
+async function processSessions(supabase: any, userId: string, sessionResponse: Response) {
+  if (!sessionResponse.ok) {
+    console.warn(`Sessions fetch failed: ${sessionResponse.status}`);
+    return;
+  }
+
+  const sessionData = await sessionResponse.json();
+  console.log(`Found ${sessionData.data?.length || 0} session records`);
+
+  for (const session of sessionData.data || []) {
+    const { error } = await supabase
+      .from('oura_sessions')
+      .upsert({
+        user_id: userId,
+        external_id: session.id,
+        session_type: session.type,
+        start_datetime: session.start_datetime,
+        end_datetime: session.end_datetime,
+        mood: session.mood,
+        tags: session.tags,
+        day: session.day,
+        raw_data: session,
+      }, {
+        onConflict: 'user_id,external_id'
+      });
+
+    if (error) {
+      console.error(`Error storing session data for ${session.id}:`, error);
     }
   }
 }
