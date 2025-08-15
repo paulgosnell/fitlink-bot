@@ -599,14 +599,19 @@ if (message.from?.is_bot) {
 ```
 
 ### **Where This Check Is Required**
-1. `/supabase/functions/shared/telegram/handler.ts` - Main handler (NEW)
-2. `/supabase/functions/shared/telegram.ts` - Legacy handler (OLD)
+1. `/supabase/functions/shared/telegram.ts` - **ACTIVE HANDLER** (Used by webhook)
+2. `/supabase/functions/shared/telegram/handler.ts` - New handler (NOT YET COMPATIBLE)
 3. Any other file that processes Telegram messages
 
 ### **Why This Happened**
-- There were TWO different telegram handlers in the codebase
-- The webhook was importing the OLD handler without bot protection
-- Even after adding bot check to one file, the other was still causing loops
+- There are TWO different telegram handlers in the codebase
+- The NEW handler (telegram/handler.ts) has different imports/structure
+- Switching to the NEW handler breaks the bot completely
+- The ACTIVE handler (telegram.ts) must be used until migration is complete
+
+### **⚠️ CRITICAL: DO NOT CHANGE THE IMPORT**
+The webhook MUST import from `../shared/telegram.ts` NOT `../shared/telegram/handler.ts`
+Changing this import will break the entire bot!
 
 ### **Prevention**
 1. Always check `is_bot` field before processing any Telegram message
