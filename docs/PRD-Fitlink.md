@@ -1,7 +1,7 @@
  # Fitlink Bot & WebApp — Product Requirements Document (PRD)
 
 Status: Source of truth for delivery. Keep updated with any change.
-Last Updated: 2025-08-14
+Last Updated: 2025-08-15
 
 ## 1. Purpose & Goals
 - Provide a Telegram-first coaching experience with OAuth integrations (Oura, Strava) and a lightweight WebApp dashboard.
@@ -59,6 +59,7 @@ Acceptance Criteria (MVP)
 - Receives messages via webhook: `/api/telegram-webhook` (Netlify proxy → Supabase `telegram-webhook`).
 - Commands: `/start`, `/connect_oura`, `/connect_strava`, `/status`, feedback actions.
 - Uses Supabase service role (inside function) to read/write DB.
+- Provider status detection: centralized via `getUserProviderStatus()` helper in `shared/database/provider-status.ts` that returns `{oura: boolean, strava: boolean}` from single DB query.
 
 ### 3.2 OAuth Integrations
 - Oura: `/oauth-oura/start` → provider → `/oauth-oura/callback` → store tokens.
@@ -153,6 +154,7 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
 - ✅ Pre‑briefing sync job implemented/scheduled ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9), [#12](https://github.com/paulgosnell/fitlink-bot/issues/12)).
 - ✅ Strava data sync function added ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10)).
 - ✅ Token refresh implemented for Oura/Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11)).
+- ✅ Provider connection status detection - FIXED: Added explicit `is_active: true` when creating new providers; centralized status checking via `getUserProviderStatus()` helper.
 
 ## 15.1 Critical OAuth Requirements (DO NOT BREAK)
 - **Netlify Proxy Pattern**: ALL OAuth flows MUST go through Netlify Edge Function proxies
@@ -171,14 +173,14 @@ Planned: Whoop, Garmin, Polar, Apple Health (via HealthKit export), Google Fit. 
   - [x] Implement, deploy and verify `data-sync-strava` function ([#10](https://github.com/paulgosnell/fitlink-bot/issues/10))
   - [x] Implement, deploy and verify `pre-briefing-sync` function ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9))
   - [x] Configure Supabase schedule: daily `data-sync-oura` (03:10 UTC)
-  - [ ] Validate pre-briefing sync pulls Oura/Strava data 10 minutes before each user’s `briefing_hour` (timezone correct) ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9)) — implemented; schedule configured
+  - [x] Validate pre-briefing sync pulls Oura/Strava data 10 minutes before each user’s `briefing_hour` (timezone correct) ([#9](https://github.com/paulgosnell/fitlink-bot/issues/9)) — implemented; schedule configured
   - [x] Validate token refresh and DB update on expiry for Oura and Strava ([#11](https://github.com/paulgosnell/fitlink-bot/issues/11))
   - [x] Verify initial backfill triggers post-OAuth for both providers
   - [x] Verify manual sync commands: `/sync_oura`, `/sync_strava` (both call server functions via `BASE_URL`)
   - [x] Complete `/status` command implementation to surface connection health
-  - [ ] Finish dashboard integration status cards and error handling ([#13](https://github.com/paulgosnell/fitlink-bot/issues/13))
+  - [x] Finish dashboard integration status cards and error handling ([#13](https://github.com/paulgosnell/fitlink-bot/issues/13))
   - [x] Route dashboard data via Netlify proxy `oauth-test-proxy` and remove Supabase SDK from client
-  - [ ] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s ([#14](https://github.com/paulgosnell/fitlink-bot/issues/14)) — includes token refresh coverage
+  - [x] Smoke tests: OAuth start/callback (Oura/Strava), webhook POST 200, dashboard load <2s ([#14](https://github.com/paulgosnell/fitlink-bot/issues/14)) — includes token refresh coverage
   - [ ] Create runbook: rollback, rotate secrets, redeploy ([#15](https://github.com/paulgosnell/fitlink-bot/issues/15))
 
 

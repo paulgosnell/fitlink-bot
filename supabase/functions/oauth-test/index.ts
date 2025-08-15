@@ -50,19 +50,19 @@ serve(async (req) => {
           .from('oura_sleep')
           .select('*')
           .eq('user_id', user.id)
-          .gte('date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-          .order('date', { ascending: false })
+          .gte('day', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          .order('day', { ascending: false })
           .limit(30),
         supabase
-          .from('activities')
+          .from('strava_activities')
           .select('*')
           .eq('user_id', user.id)
-          .gte('start_time', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-          .order('start_time', { ascending: false })
+          .gte('start_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .order('start_date', { ascending: false })
           .limit(50),
         supabase
           .from('providers')
-          .select('provider, is_active, created_at')
+          .select('provider, is_active, created_at, updated_at')
           .eq('user_id', user.id)
       ]);
 
@@ -72,13 +72,15 @@ serve(async (req) => {
           telegram_id: user.telegram_id,
           username: user.username,
           first_name: user.first_name,
-          last_name: user.last_name
+          last_name: user.last_name,
+          city: user.city,
+          timezone: user.timezone,
+          briefing_hour: user.briefing_hour,
+          created_at: user.created_at
         },
-        health_data: {
-          sleep: sleepData.data || [],
-          activities: activityData.data || [],
-          providers: providers.data || []
-        }
+        sleep_data: sleepData.data || [],
+        activities: activityData.data || [],
+        providers: providers.data || []
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
