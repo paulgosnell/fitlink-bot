@@ -177,7 +177,8 @@ serve(async (req) => {
     try {
       const userId = url.searchParams.get('user_id');
       const clientId = Deno.env.get("OURA_CLIENT_ID");
-      const baseUrl = Deno.env.get('BASE_URL') || "https://fitlinkbot.netlify.app";
+      // CRITICAL: Always use Netlify URL for OAuth callbacks (not Supabase direct URL)
+      const baseUrl = "https://fitlinkbot.netlify.app";
       
       if (!userId) return new Response(JSON.stringify({ error: 'Missing user_id' }), { status: 400, headers: corsHeaders });
       if (!clientId) return new Response(JSON.stringify({ error: 'Missing OURA_CLIENT_ID' }), { status: 500, headers: corsHeaders });
