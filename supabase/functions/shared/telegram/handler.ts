@@ -48,6 +48,12 @@ async function handleMessage(
     return;
   }
 
+  // CRITICAL: Ignore messages from bots (including ourselves) to prevent infinite loops
+  if (telegramUser.is_bot) {
+    console.log("Ignoring message from bot:", telegramUser.username);
+    return;
+  }
+
   // Get or create user
   let user = await getUserByTelegramId(supabase, telegramUser.id);
   
