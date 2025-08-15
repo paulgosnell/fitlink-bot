@@ -254,12 +254,66 @@ export interface TelegramInlineKeyboardButton {
 }
 
 // AI Briefing types
+export interface ComprehensiveOuraData {
+  daily_activity?: {
+    date: string;
+    activity_score?: number;
+    steps?: number;
+    active_calories?: number;
+    total_calories?: number;
+    high_activity_minutes?: number;
+    medium_activity_minutes?: number;
+    low_activity_minutes?: number;
+    inactive_minutes?: number;
+    average_met?: number;
+  };
+  daily_stress?: {
+    date: string;
+    stress_high?: number;
+    stress_recovery?: number;
+    stress_day_summary?: string;
+  };
+  recent_heart_rate?: {
+    avg_resting_hr?: number;
+    hr_variability?: number;
+    latest_reading?: number;
+    trend?: 'up' | 'down' | 'stable';
+  };
+  temperature?: {
+    date: string;
+    temperature_deviation?: number;
+    temperature_trend_deviation?: number;
+    illness_risk?: boolean;
+  };
+  spo2?: {
+    date: string;
+    spo2_percentage?: any;
+  };
+  recent_workouts?: Array<{
+    external_id: string;
+    activity: string;
+    start_datetime: string;
+    intensity: string;
+    load?: number;
+    average_heart_rate?: number;
+    calories?: number;
+  }>;
+  recent_sessions?: Array<{
+    external_id: string;
+    session_type: string;
+    start_datetime: string;
+    mood?: string;
+    tags?: string[];
+  }>;
+}
+
 export interface BriefingContext {
   user: User;
   sleep?: SleepTrends;
   training?: WeeklyLoadSummary;
   weather?: TodaysConditions;
   last_activities?: Activity[];
+  oura_comprehensive?: ComprehensiveOuraData;
 }
 
 export interface AIBriefingResponse {

@@ -3,7 +3,8 @@ import type {
   BriefingContext, 
   AIBriefingResponse, 
   BriefingData,
-  TelegramInlineKeyboardMarkup 
+  TelegramInlineKeyboardMarkup,
+  ComprehensiveOuraData
 } from "../types.ts";
 import { getUserById } from "../database/users.ts";
 import { createBriefingKeyboard } from "../telegram/menus.ts";
@@ -118,12 +119,13 @@ async function gatherBriefingContext(
   userId: string,
   supabase: SupabaseClient
 ): Promise<BriefingContext> {
-  const [user, sleep, training, weather, recentActivities] = await Promise.all([
+  const [user, sleep, training, weather, recentActivities, ouraData] = await Promise.all([
     getUserById(supabase, userId),
     getSleepTrends(supabase, userId),
     getTrainingLoad(supabase, userId),
     getTodaysWeather(supabase, userId),
-    getRecentActivities(supabase, userId, 3)
+    getRecentActivities(supabase, userId, 3),
+    getComprehensiveOuraData(supabase, userId)
   ]);
 
   return {
@@ -131,7 +133,8 @@ async function gatherBriefingContext(
     sleep,
     training,
     weather,
-    last_activities: recentActivities
+    last_activities: recentActivities,
+    oura_comprehensive: ouraData
   };
 }
 
@@ -185,6 +188,179 @@ async function getSleepTrends(supabase: SupabaseClient, userId: string) {
   }
 
   return data;
+}
+
+async function getComprehensiveOuraData(supabase: SupabaseClient, userId: string): Promise<ComprehensiveOuraData | undefined> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const [
+      dailyActivity,
+      dailyStress,
+      heartRateData,
+      temperatureData,
+      spo2Data,
+      recentWorkouts,
+      recentSessions
+    ] = await Promise.all([
+      // Get yesterday's activity data (most recent complete day)
+      supabase
+        .from('oura_daily_activity')
+        .select('*')
+        .eq('user_id', userId)
+        .in('date', [today, yesterday])
+        .order('date', { ascending: false })
+        .limit(1)
+        .single(),
+      
+      // Get recent stress data
+      supabase
+        .from('oura_daily_stress')
+        .select('*')
+        .eq('user_id', userId)
+        .in('date', [today, yesterday])
+        .order('date', { ascending: false })
+        .limit(1)
+        .single(),
+      
+      // Get recent heart rate data (last 24 hours)
+      supabase
+        .from('oura_heart_rate')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('timestamp', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .order('timestamp', { ascending: false })
+        .limit(100),
+      
+      // Get recent temperature data
+      supabase
+        .from('oura_temperature')
+        .select('*')
+        .eq('user_id', userId)
+        .in('date', [today, yesterday])
+        .order('date', { ascending: false })
+        .limit(1)
+        .single(),
+      
+      // Get recent SPO2 data
+      supabase
+        .from('oura_daily_spo2')
+        .select('*')
+        .eq('user_id', userId)
+        .in('date', [today, yesterday])
+        .order('date', { ascending: false })
+        .limit(1)
+        .single(),
+      
+      // Get recent workouts (last 3 days)
+      supabase
+        .from('oura_workouts')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('day', threeDaysAgo)
+        .order('start_datetime', { ascending: false })
+        .limit(5),
+      
+      // Get recent sessions (last 3 days)
+      supabase
+        .from('oura_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('day', threeDaysAgo)
+        .order('start_datetime', { ascending: false })
+        .limit(5)
+    ]);
+
+    // Process heart rate data to calculate trends
+    let heartRateProcessed;
+    if (heartRateData.data && heartRateData.data.length > 0) {
+      const heartRates = heartRateData.data.map(hr => hr.heart_rate);
+      const avgHR = heartRates.reduce((sum, hr) => sum + hr, 0) / heartRates.length;
+      const recentHR = heartRates.slice(0, 10).reduce((sum, hr) => sum + hr, 0) / Math.min(10, heartRates.length);
+      const olderHR = heartRates.slice(-10).reduce((sum, hr) => sum + hr, 0) / Math.min(10, heartRates.slice(-10).length);
+      
+      heartRateProcessed = {
+        avg_resting_hr: Math.round(avgHR),
+        latest_reading: heartRates[0],
+        trend: Math.abs(recentHR - olderHR) < 2 ? 'stable' : (recentHR > olderHR ? 'up' : 'down')
+      };
+    }
+
+    // Check for illness risk from temperature
+    const illnessRisk = temperatureData.data?.temperature_deviation && 
+                       Math.abs(temperatureData.data.temperature_deviation) > 0.5;
+
+    const result: ComprehensiveOuraData = {
+      daily_activity: dailyActivity.data ? {
+        date: dailyActivity.data.date,
+        activity_score: dailyActivity.data.activity_score,
+        steps: dailyActivity.data.steps,
+        active_calories: dailyActivity.data.active_calories,
+        total_calories: dailyActivity.data.total_calories,
+        high_activity_minutes: dailyActivity.data.high_activity_minutes,
+        medium_activity_minutes: dailyActivity.data.medium_activity_minutes,
+        low_activity_minutes: dailyActivity.data.low_activity_minutes,
+        inactive_minutes: dailyActivity.data.inactive_minutes,
+        average_met: dailyActivity.data.average_met,
+      } : undefined,
+      
+      daily_stress: dailyStress.data ? {
+        date: dailyStress.data.date,
+        stress_high: dailyStress.data.stress_high,
+        stress_recovery: dailyStress.data.stress_recovery,
+        stress_day_summary: dailyStress.data.stress_day_summary,
+      } : undefined,
+      
+      recent_heart_rate: heartRateProcessed,
+      
+      temperature: temperatureData.data ? {
+        date: temperatureData.data.date,
+        temperature_deviation: temperatureData.data.temperature_deviation,
+        temperature_trend_deviation: temperatureData.data.temperature_trend_deviation,
+        illness_risk: illnessRisk,
+      } : undefined,
+      
+      spo2: spo2Data.data ? {
+        date: spo2Data.data.date,
+        spo2_percentage: spo2Data.data.spo2_percentage,
+      } : undefined,
+      
+      recent_workouts: recentWorkouts.data?.map(workout => ({
+        external_id: workout.external_id,
+        activity: workout.activity,
+        start_datetime: workout.start_datetime,
+        intensity: workout.intensity,
+        load: workout.load,
+        average_heart_rate: workout.average_heart_rate,
+        calories: workout.calories,
+      })) || [],
+      
+      recent_sessions: recentSessions.data?.map(session => ({
+        external_id: session.external_id,
+        session_type: session.session_type,
+        start_datetime: session.start_datetime,
+        mood: session.mood,
+        tags: session.tags,
+      })) || []
+    };
+
+    console.log('Comprehensive Oura data gathered:', {
+      hasActivity: !!result.daily_activity,
+      hasStress: !!result.daily_stress,
+      hasHeartRate: !!result.recent_heart_rate,
+      hasTemperature: !!result.temperature,
+      hasSPO2: !!result.spo2,
+      workoutCount: result.recent_workouts?.length || 0,
+      sessionCount: result.recent_sessions?.length || 0
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error gathering comprehensive Oura data:', error);
+    return undefined;
+  }
 }
 
 async function getTrainingLoad(supabase: SupabaseClient, userId: string) {
@@ -613,7 +789,7 @@ function formatNarrativeBriefingMessage(healthSummary: HealthSummary, ai: AIBrie
 }
 
 function buildBriefingPrompt(context: BriefingContext): string {
-  const { user, sleep, training, weather, last_activities } = context;
+  const { user, sleep, training, weather, last_activities, oura_comprehensive } = context;
   
   let prompt = `User: ${user.first_name}, goal: ${user.training_goal.replace('_', ' ')}\n\n`;
 
@@ -630,6 +806,80 @@ function buildBriefingPrompt(context: BriefingContext): string {
     prompt += `\n\n`;
   }
 
+  // Comprehensive Oura health data
+  if (oura_comprehensive) {
+    // Daily activity metrics
+    if (oura_comprehensive.daily_activity) {
+      const activity = oura_comprehensive.daily_activity;
+      prompt += `Daily Activity (yesterday):\n`;
+      if (activity.steps) prompt += `- Steps: ${activity.steps.toLocaleString()}\n`;
+      if (activity.active_calories) prompt += `- Active calories: ${activity.active_calories}\n`;
+      if (activity.activity_score) prompt += `- Activity score: ${activity.activity_score}/100\n`;
+      if (activity.high_activity_minutes) prompt += `- High activity: ${activity.high_activity_minutes}min\n`;
+      if (activity.inactive_minutes) prompt += `- Inactive time: ${Math.round(activity.inactive_minutes / 60)}h\n`;
+      prompt += `\n`;
+    }
+
+    // Stress and recovery data
+    if (oura_comprehensive.daily_stress) {
+      const stress = oura_comprehensive.daily_stress;
+      prompt += `Stress & Recovery:\n`;
+      if (stress.stress_day_summary) prompt += `- Day summary: ${stress.stress_day_summary}\n`;
+      if (stress.stress_high) prompt += `- High stress: ${stress.stress_high}min\n`;
+      if (stress.stress_recovery) prompt += `- Recovery time: ${stress.stress_recovery}min\n`;
+      prompt += `\n`;
+    }
+
+    // Heart rate trends
+    if (oura_comprehensive.recent_heart_rate) {
+      const hr = oura_comprehensive.recent_heart_rate;
+      prompt += `Heart Rate Trends:\n`;
+      if (hr.avg_resting_hr) prompt += `- Average RHR: ${hr.avg_resting_hr}bpm\n`;
+      if (hr.latest_reading) prompt += `- Latest: ${hr.latest_reading}bpm\n`;
+      if (hr.trend) prompt += `- Trend: ${hr.trend}\n`;
+      prompt += `\n`;
+    }
+
+    // Temperature and illness detection
+    if (oura_comprehensive.temperature) {
+      const temp = oura_comprehensive.temperature;
+      prompt += `Body Temperature:\n`;
+      if (temp.temperature_deviation) prompt += `- Deviation: ${temp.temperature_deviation}°C\n`;
+      if (temp.illness_risk) prompt += `- ⚠️ Illness risk detected\n`;
+      prompt += `\n`;
+    }
+
+    // Blood oxygen
+    if (oura_comprehensive.spo2?.spo2_percentage) {
+      prompt += `Blood Oxygen: Available\n\n`;
+    }
+
+    // Recent Oura workouts
+    if (oura_comprehensive.recent_workouts && oura_comprehensive.recent_workouts.length > 0) {
+      prompt += `Recent Oura Workouts:\n`;
+      oura_comprehensive.recent_workouts.slice(0, 3).forEach(workout => {
+        const date = new Date(workout.start_datetime).toLocaleDateString();
+        prompt += `- ${date}: ${workout.activity} (${workout.intensity})`;
+        if (workout.load) prompt += ` Load: ${workout.load}`;
+        if (workout.calories) prompt += ` Cal: ${workout.calories}`;
+        prompt += `\n`;
+      });
+      prompt += `\n`;
+    }
+
+    // Recovery sessions (meditation, breathing)
+    if (oura_comprehensive.recent_sessions && oura_comprehensive.recent_sessions.length > 0) {
+      prompt += `Recovery Sessions:\n`;
+      oura_comprehensive.recent_sessions.slice(0, 2).forEach(session => {
+        const date = new Date(session.start_datetime).toLocaleDateString();
+        prompt += `- ${date}: ${session.session_type}`;
+        if (session.mood) prompt += ` (${session.mood})`;
+        prompt += `\n`;
+      });
+      prompt += `\n`;
+    }
+  }
+
   // Training load
   if (training?.current_week_sessions !== undefined) {
     prompt += `Training (7 days):\n`;
@@ -641,9 +891,9 @@ function buildBriefingPrompt(context: BriefingContext): string {
     prompt += `\n`;
   }
 
-  // Recent activities
+  // Recent Strava activities
   if (last_activities && last_activities.length > 0) {
-    prompt += `Recent activities:\n`;
+    prompt += `Recent Strava activities:\n`;
     last_activities.slice(0, 2).forEach(activity => {
       const date = new Date(activity.start_time).toLocaleDateString();
       const duration = Math.round(activity.duration_seconds / 60);

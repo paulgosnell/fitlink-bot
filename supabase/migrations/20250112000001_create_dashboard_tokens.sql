@@ -1,7 +1,7 @@
 -- Create dashboard_tokens table for secure web dashboard access
 CREATE TABLE IF NOT EXISTS public.dashboard_tokens (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     token UUID NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -19,7 +19,7 @@ ALTER TABLE public.dashboard_tokens ENABLE ROW LEVEL SECURITY;
 -- RLS policies - users can only see their own tokens
 CREATE POLICY "Users can view their own dashboard tokens"
     ON public.dashboard_tokens FOR SELECT
-    USING (user_id = auth.uid()::bigint);
+    USING (user_id = auth.uid());
 
 -- Allow service role to manage tokens (for bot operations)
 CREATE POLICY "Service role can manage dashboard tokens"
