@@ -128,6 +128,11 @@ serve(async (req) => {
         });
       } catch (error) {
         console.error('Error in Oura OAuth callback:', error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
         
         const errorHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -146,6 +151,7 @@ serve(async (req) => {
             min-height: 100vh;
             margin: 0;
             text-align: center;
+            padding: 1rem;
         }
         .container {
             background: rgba(255, 255, 255, 0.1);
@@ -153,21 +159,38 @@ serve(async (req) => {
             padding: 2rem;
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
         }
         h1 { margin-top: 0; font-size: 2rem; }
         p { font-size: 1.1rem; opacity: 0.9; }
+        .error-details { 
+            background: rgba(0,0,0,0.3); 
+            padding: 1rem; 
+            border-radius: 10px; 
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            text-align: left;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>❌ Connection Failed</h1>
         <p>Sorry, we couldn't connect your Oura Ring.</p>
-        <p>Please try again or contact support if the problem persists.</p>
+        <div class="error-details">
+            <strong>Error Details:</strong><br>
+            ${error.message || 'Unknown error'}<br><br>
+            <strong>Error Type:</strong> ${error.name || 'Error'}<br><br>
+            <strong>Stack:</strong><br>
+            <pre style="white-space: pre-wrap; font-size: 0.8rem;">${(error.stack || '').substring(0, 500)}</pre>
+        </div>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">Please screenshot this error and send to support.</p>
     </div>
     <script>
         setTimeout(() => {
             window.close();
-        }, 5000);
+        }, 10000);
     </script>
 </body>
 </html>`;
