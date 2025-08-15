@@ -60,6 +60,16 @@ serve(async (req) => {
           scopes: ['read', 'activity:read_all']
         });
 
+        // Trigger initial data sync (last 7 days)
+        console.log('Triggering initial Strava data sync...');
+        try {
+          await syncInitialStravaData(supabase, user.id, tokens.access_token);
+          console.log('Initial data sync completed successfully');
+        } catch (syncError) {
+          console.error('Initial data sync failed:', syncError);
+          // Don't fail the OAuth flow if sync fails
+        }
+
         const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -228,4 +238,72 @@ async function exchangeCodeForTokens(code: string) {
     expires_at: data.expires_at ? new Date(Date.now() + data.expires_at * 1000).toISOString() : undefined,
     athlete: data.athlete
   };
+}
+
+async function syncInitialStravaData(supabase: any, userId: string, accessToken: string) {
+  // Fetch last 7 days of activities
+  const after = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
+  
+  console.log(`Fetching Strava activities after ${new Date(after * 1000).toISOString()}`);
+
+  // Fetch activities
+  const activitiesResponse = await fetch(`https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=100`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (activitiesResponse.ok) {
+    const activities = await activitiesResponse.json();
+    console.log(`Found ${activities.length} activities`);
+    
+    // Store activity data
+    for (const activity of activities) {
+      // Calculate TSS (Training Stress Score) if possible
+      let tss = null;
+      if (activity.suffer_score) {
+        // Strava's suffer score is similar to TSS
+        tss = activity.suffer_score;
+      } else if (activity.moving_time && activity.average_heartrate && activity.max_heartrate) {
+        // Estimate TSS from duration and heart rate
+        const durationHours = activity.moving_time / 3600;
+        const hrIntensity = (activity.average_heartrate - 60) / (activity.max_heartrate - 60);
+        tss = Math.round(durationHours * hrIntensity * 100);
+      }
+
+      const { error } = await supabase
+        .from('strava_activities')
+        .upsert({
+          user_id: userId,
+          activity_id: activity.id.toString(),
+          name: activity.name,
+          type: activity.type,
+          sport_type: activity.sport_type,
+          start_date: activity.start_date,
+          timezone: activity.timezone,
+          distance: activity.distance,
+          moving_time: activity.moving_time,
+          elapsed_time: activity.elapsed_time,
+          total_elevation_gain: activity.total_elevation_gain,
+          average_speed: activity.average_speed,
+          max_speed: activity.max_speed,
+          average_heartrate: activity.average_heartrate,
+          max_heartrate: activity.max_heartrate,
+          calories: activity.calories,
+          achievement_count: activity.achievement_count,
+          kudos_count: activity.kudos_count,
+          comment_count: activity.comment_count,
+          suffer_score: activity.suffer_score,
+          training_stress_score: tss,
+        }, {
+          onConflict: 'user_id,activity_id'
+        });
+
+      if (error) {
+        console.error('Error storing activity:', error);
+      }
+    }
+  } else {
+    console.error('Failed to fetch Strava activities:', activitiesResponse.status);
+  }
 }

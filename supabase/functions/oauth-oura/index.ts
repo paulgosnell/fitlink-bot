@@ -60,6 +60,16 @@ serve(async (req) => {
           scopes: ['email', 'personal', 'daily']
         });
 
+        // Trigger initial data sync (last 7 days)
+        console.log('Triggering initial Oura data sync...');
+        try {
+          await syncInitialOuraData(supabase, user.id, tokens.access_token);
+          console.log('Initial data sync completed successfully');
+        } catch (syncError) {
+          console.error('Initial data sync failed:', syncError);
+          // Don't fail the OAuth flow if sync fails
+        }
+
         const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -243,4 +253,134 @@ async function exchangeCodeForTokens(code: string) {
     expires_at: data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString() : undefined,
     user_id: data.user_id
   };
+}
+
+async function syncInitialOuraData(supabase: any, userId: string, accessToken: string) {
+  // Fetch last 7 days of data for initial sync
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 7);
+  
+  const endDateStr = endDate.toISOString().split('T')[0];
+  const startDateStr = startDate.toISOString().split('T')[0];
+
+  console.log(`Fetching Oura data from ${startDateStr} to ${endDateStr}`);
+
+  // Fetch sleep data
+  const sleepResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_sleep?start_date=${startDateStr}&end_date=${endDateStr}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (sleepResponse.ok) {
+    const sleepData = await sleepResponse.json();
+    console.log(`Found ${sleepData.data?.length || 0} sleep records`);
+    
+    // Store sleep data
+    for (const sleep of sleepData.data || []) {
+      const { error } = await supabase
+        .from('oura_sleep')
+        .upsert({
+          user_id: userId,
+          day: sleep.day,
+          score: sleep.score,
+          contributors: sleep.contributors,
+          efficiency: sleep.efficiency,
+          total_sleep_duration: sleep.total_sleep_duration,
+          rem_sleep_duration: sleep.rem_sleep_duration,
+          deep_sleep_duration: sleep.deep_sleep_duration,
+          light_sleep_duration: sleep.light_sleep_duration,
+          awake_time: sleep.awake_time,
+          latency: sleep.latency,
+          bedtime_start: sleep.bedtime_start,
+          bedtime_end: sleep.bedtime_end,
+          average_heart_rate: sleep.average_heart_rate,
+          lowest_heart_rate: sleep.lowest_heart_rate,
+          heart_rate_variability: sleep.average_hrv,
+          respiratory_rate: sleep.average_breath,
+          temperature_deviation: sleep.temperature_deviation,
+        }, {
+          onConflict: 'user_id,day'
+        });
+
+      if (error) {
+        console.error('Error storing sleep data:', error);
+      }
+    }
+  }
+
+  // Fetch readiness data
+  const readinessResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=${startDateStr}&end_date=${endDateStr}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (readinessResponse.ok) {
+    const readinessData = await readinessResponse.json();
+    console.log(`Found ${readinessData.data?.length || 0} readiness records`);
+    
+    // Store readiness data
+    for (const readiness of readinessData.data || []) {
+      const { error } = await supabase
+        .from('oura_readiness')
+        .upsert({
+          user_id: userId,
+          day: readiness.day,
+          score: readiness.score,
+          temperature_deviation: readiness.temperature_deviation,
+          temperature_trend_deviation: readiness.temperature_trend_deviation,
+          contributors: readiness.contributors,
+        }, {
+          onConflict: 'user_id,day'
+        });
+
+      if (error) {
+        console.error('Error storing readiness data:', error);
+      }
+    }
+  }
+
+  // Fetch activity data
+  const activityResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_activity?start_date=${startDateStr}&end_date=${endDateStr}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (activityResponse.ok) {
+    const activityData = await activityResponse.json();
+    console.log(`Found ${activityData.data?.length || 0} activity records`);
+    
+    // Store activity data
+    for (const activity of activityData.data || []) {
+      const { error } = await supabase
+        .from('oura_activity')
+        .upsert({
+          user_id: userId,
+          day: activity.day,
+          score: activity.score,
+          active_calories: activity.active_calories,
+          total_calories: activity.total_calories,
+          steps: activity.steps,
+          target_calories: activity.target_calories,
+          target_meters: activity.target_meters,
+          equivalent_walking_distance: activity.equivalent_walking_distance,
+          high_activity_time: activity.high_activity_time,
+          medium_activity_time: activity.medium_activity_time,
+          low_activity_time: activity.low_activity_time,
+          sedentary_time: activity.sedentary_time,
+          resting_time: activity.resting_time,
+          average_met_minutes: activity.average_met_minutes,
+          contributors: activity.contributors,
+        }, {
+          onConflict: 'user_id,day'
+        });
+
+      if (error) {
+        console.error('Error storing activity data:', error);
+      }
+    }
+  }
 }
