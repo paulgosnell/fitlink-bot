@@ -226,14 +226,23 @@ serve(async (req) => {
       // CRITICAL: Always use Netlify URL for OAuth callbacks (not Supabase direct URL)
       const baseUrl = "https://fitlinkbot.netlify.app";
       
+      console.log('OAuth start received user_id:', userId, 'Type:', typeof userId, 'IsUUID:', /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId || ''));
+      
       if (!userId) return new Response(JSON.stringify({ error: 'Missing user_id' }), { status: 400, headers: corsHeaders });
       if (!clientId) return new Response(JSON.stringify({ error: 'Missing OURA_CLIENT_ID' }), { status: 500, headers: corsHeaders });
+
+      // Validate that userId is a number (Telegram ID), not a UUID
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+        return new Response(JSON.stringify({ 
+          error: `Invalid user_id: received UUID ${userId} but expected Telegram ID (number)` 
+        }), { status: 400, headers: corsHeaders });
+      }
 
       const state = `${userId}_${crypto.randomUUID()}`;
       const redirectUri = `${baseUrl}/oauth-oura/callback`;
       const ouraAuthUrl = `https://cloud.ouraring.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=email personal daily&state=${state}`;
       
-      console.log('Redirecting to Oura OAuth:', ouraAuthUrl);
+      console.log('Redirecting to Oura OAuth with state:', state);
       return Response.redirect(ouraAuthUrl);
     } catch (e) {
       console.error('OAuth start error (Oura):', e);
