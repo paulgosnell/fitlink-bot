@@ -293,29 +293,51 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
     fetch(`https://api.ouraring.com/v2/usercollection/sessions?start_date=${startDateStr}&end_date=${endDateStr}`, { headers: authHeaders })
   ]);
 
-  // Process sleep data
+  // Process sleep data (always available)
   await processSleepData(supabase, userId, sleepResponse, readinessResponse);
   
-  // Process daily activity data
-  await processDailyActivity(supabase, userId, activityResponse);
+  // Process additional data only if tables exist
+  try {
+    await processDailyActivity(supabase, userId, activityResponse);
+  } catch (error) {
+    console.warn('Daily activity processing failed (table may not exist):', error);
+  }
   
-  // Process daily stress data
-  await processDailyStress(supabase, userId, stressResponse);
+  try {
+    await processDailyStress(supabase, userId, stressResponse);
+  } catch (error) {
+    console.warn('Daily stress processing failed (table may not exist):', error);
+  }
   
-  // Process heart rate data
-  await processHeartRate(supabase, userId, heartRateResponse);
+  try {
+    await processHeartRate(supabase, userId, heartRateResponse);
+  } catch (error) {
+    console.warn('Heart rate processing failed (table may not exist):', error);
+  }
   
-  // Process SPO2 data
-  await processSPO2(supabase, userId, spo2Response);
+  try {
+    await processSPO2(supabase, userId, spo2Response);
+  } catch (error) {
+    console.warn('SPO2 processing failed (table may not exist):', error);
+  }
   
-  // Process temperature data
-  await processTemperature(supabase, userId, temperatureResponse);
+  try {
+    await processTemperature(supabase, userId, temperatureResponse);
+  } catch (error) {
+    console.warn('Temperature processing failed (table may not exist):', error);
+  }
   
-  // Process workout data
-  await processWorkouts(supabase, userId, workoutResponse);
+  try {
+    await processWorkouts(supabase, userId, workoutResponse);
+  } catch (error) {
+    console.warn('Workouts processing failed (table may not exist):', error);
+  }
   
-  // Process session data
-  await processSessions(supabase, userId, sessionResponse);
+  try {
+    await processSessions(supabase, userId, sessionResponse);
+  } catch (error) {
+    console.warn('Sessions processing failed (table may not exist):', error);
+  }
 }
 
 async function processSleepData(supabase: any, userId: string, sleepResponse: Response, readinessResponse: Response) {
@@ -358,20 +380,11 @@ async function processSleepData(supabase: any, userId: string, sleepResponse: Re
       .upsert({
         user_id: userId,
         date: date,
-        total_sleep_minutes: sleep?.total_sleep_duration ? Math.round(sleep.total_sleep_duration / 60) : null,
-        sleep_efficiency: sleep?.efficiency || (sleep?.sleep_score_efficiency ? sleep.sleep_score_efficiency : null),
-        deep_sleep_minutes: sleep?.deep_sleep_duration ? Math.round(sleep.deep_sleep_duration / 60) : null,
-        light_sleep_minutes: sleep?.light_sleep_duration ? Math.round(sleep.light_sleep_duration / 60) : null,
-        rem_sleep_minutes: sleep?.rem_sleep_duration ? Math.round(sleep.rem_sleep_duration / 60) : null,
-        awake_minutes: sleep?.awake_time ? Math.round(sleep.awake_time / 60) : null,
-        bedtime_start: sleep?.bedtime_start,
-        bedtime_end: sleep?.bedtime_end,
-        hrv_avg: sleep?.heart_rate?.average_hrv || sleep?.average_hrv,
-        resting_heart_rate: sleep?.heart_rate?.resting || sleep?.lowest_heart_rate,
-        temperature_deviation: sleep?.temperature_deviation,
-        respiratory_rate: sleep?.respiratory_rate?.average || sleep?.average_breath,
-        readiness_score: readiness?.score,
-        raw_data: { sleep, readiness },
+        total_sleep_duration: sleep?.total_sleep_duration ? (sleep.total_sleep_duration / 3600) : null, // Convert seconds to hours
+        deep_sleep_duration: sleep?.deep_sleep_duration ? (sleep.deep_sleep_duration / 3600) : null, // Convert seconds to hours
+        light_sleep_duration: sleep?.light_sleep_duration ? (sleep.light_sleep_duration / 3600) : null, // Convert seconds to hours
+        rem_sleep_duration: sleep?.rem_sleep_duration ? (sleep.rem_sleep_duration / 3600) : null, // Convert seconds to hours
+        sleep_score: readiness?.score || null, // Use readiness score as sleep score
       }, {
         onConflict: 'user_id,date'
       });

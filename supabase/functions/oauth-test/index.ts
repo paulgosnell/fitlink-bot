@@ -122,8 +122,8 @@ serve(async (req) => {
           .from('oura_sleep')
           .select('*')
           .eq('user_id', user.id)
-          .gte('day', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-          .order('day', { ascending: false })
+          .gte('date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          .order('date', { ascending: false })
           .limit(30),
         supabase
           .from('strava_activities')
