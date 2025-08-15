@@ -271,32 +271,48 @@ async function syncInitialStravaData(supabase: any, userId: string, accessToken:
         tss = Math.round(durationHours * hrIntensity * 100);
       }
 
+      // Map Strava activity type to our enum
+      let activityType = 'other';
+      switch (activity.type?.toLowerCase()) {
+        case 'run':
+        case 'virtualrun':
+          activityType = 'run';
+          break;
+        case 'ride':
+        case 'virtualride':
+          activityType = 'ride';
+          break;
+        case 'swim':
+          activityType = 'swim';
+          break;
+        case 'walk':
+          activityType = 'walk';
+          break;
+        case 'hike':
+          activityType = 'hike';
+          break;
+        default:
+          activityType = 'other';
+      }
+
       const { error } = await supabase
-        .from('strava_activities')
+        .from('activities')
         .upsert({
           user_id: userId,
-          activity_id: activity.id.toString(),
+          source: 'strava',
+          external_id: activity.id.toString(),
+          activity_type: activityType,
           name: activity.name,
-          type: activity.type,
-          sport_type: activity.sport_type,
-          start_date: activity.start_date,
-          timezone: activity.timezone,
-          distance: activity.distance,
-          moving_time: activity.moving_time,
-          elapsed_time: activity.elapsed_time,
-          total_elevation_gain: activity.total_elevation_gain,
-          average_speed: activity.average_speed,
-          max_speed: activity.max_speed,
-          average_heartrate: activity.average_heartrate,
-          max_heartrate: activity.max_heartrate,
-          calories: activity.calories,
-          achievement_count: activity.achievement_count,
-          kudos_count: activity.kudos_count,
-          comment_count: activity.comment_count,
-          suffer_score: activity.suffer_score,
-          training_stress_score: tss,
+          start_time: activity.start_date,
+          duration_seconds: activity.moving_time,
+          distance_meters: activity.distance,
+          elevation_gain_meters: activity.total_elevation_gain,
+          average_heart_rate: activity.average_heartrate,
+          max_heart_rate: activity.max_heartrate,
+          tss_estimated: tss,
+          raw_data: activity,
         }, {
-          onConflict: 'user_id,activity_id'
+          onConflict: 'user_id,source,external_id'
         });
 
       if (error) {

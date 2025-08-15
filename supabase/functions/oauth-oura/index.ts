@@ -283,25 +283,23 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
         .from('oura_sleep')
         .upsert({
           user_id: userId,
-          day: sleep.day,
-          score: sleep.score,
-          contributors: sleep.contributors,
-          efficiency: sleep.efficiency,
-          total_sleep_duration: sleep.total_sleep_duration,
-          rem_sleep_duration: sleep.rem_sleep_duration,
-          deep_sleep_duration: sleep.deep_sleep_duration,
-          light_sleep_duration: sleep.light_sleep_duration,
-          awake_time: sleep.awake_time,
-          latency: sleep.latency,
+          date: sleep.day,
+          total_sleep_minutes: sleep.total_sleep_duration ? Math.round(sleep.total_sleep_duration / 60) : null,
+          sleep_efficiency: sleep.efficiency,
+          deep_sleep_minutes: sleep.deep_sleep_duration ? Math.round(sleep.deep_sleep_duration / 60) : null,
+          light_sleep_minutes: sleep.light_sleep_duration ? Math.round(sleep.light_sleep_duration / 60) : null,
+          rem_sleep_minutes: sleep.rem_sleep_duration ? Math.round(sleep.rem_sleep_duration / 60) : null,
+          awake_minutes: sleep.awake_time ? Math.round(sleep.awake_time / 60) : null,
           bedtime_start: sleep.bedtime_start,
           bedtime_end: sleep.bedtime_end,
-          average_heart_rate: sleep.average_heart_rate,
-          lowest_heart_rate: sleep.lowest_heart_rate,
-          heart_rate_variability: sleep.average_hrv,
-          respiratory_rate: sleep.average_breath,
+          hrv_avg: sleep.average_hrv,
+          resting_heart_rate: sleep.lowest_heart_rate,
           temperature_deviation: sleep.temperature_deviation,
+          respiratory_rate: sleep.average_breath,
+          readiness_score: sleep.score,
+          raw_data: sleep,
         }, {
-          onConflict: 'user_id,day'
+          onConflict: 'user_id,date'
         });
 
       if (error) {
@@ -310,77 +308,6 @@ async function syncInitialOuraData(supabase: any, userId: string, accessToken: s
     }
   }
 
-  // Fetch readiness data
-  const readinessResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_readiness?start_date=${startDateStr}&end_date=${endDateStr}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-
-  if (readinessResponse.ok) {
-    const readinessData = await readinessResponse.json();
-    console.log(`Found ${readinessData.data?.length || 0} readiness records`);
-    
-    // Store readiness data
-    for (const readiness of readinessData.data || []) {
-      const { error } = await supabase
-        .from('oura_readiness')
-        .upsert({
-          user_id: userId,
-          day: readiness.day,
-          score: readiness.score,
-          temperature_deviation: readiness.temperature_deviation,
-          temperature_trend_deviation: readiness.temperature_trend_deviation,
-          contributors: readiness.contributors,
-        }, {
-          onConflict: 'user_id,day'
-        });
-
-      if (error) {
-        console.error('Error storing readiness data:', error);
-      }
-    }
-  }
-
-  // Fetch activity data
-  const activityResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_activity?start_date=${startDateStr}&end_date=${endDateStr}`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-
-  if (activityResponse.ok) {
-    const activityData = await activityResponse.json();
-    console.log(`Found ${activityData.data?.length || 0} activity records`);
-    
-    // Store activity data
-    for (const activity of activityData.data || []) {
-      const { error } = await supabase
-        .from('oura_activity')
-        .upsert({
-          user_id: userId,
-          day: activity.day,
-          score: activity.score,
-          active_calories: activity.active_calories,
-          total_calories: activity.total_calories,
-          steps: activity.steps,
-          target_calories: activity.target_calories,
-          target_meters: activity.target_meters,
-          equivalent_walking_distance: activity.equivalent_walking_distance,
-          high_activity_time: activity.high_activity_time,
-          medium_activity_time: activity.medium_activity_time,
-          low_activity_time: activity.low_activity_time,
-          sedentary_time: activity.sedentary_time,
-          resting_time: activity.resting_time,
-          average_met_minutes: activity.average_met_minutes,
-          contributors: activity.contributors,
-        }, {
-          onConflict: 'user_id,day'
-        });
-
-      if (error) {
-        console.error('Error storing activity data:', error);
-      }
-    }
-  }
+  // Note: Readiness and activity data is included in sleep data response
+  // The readiness_score is stored in the sleep record above
 }

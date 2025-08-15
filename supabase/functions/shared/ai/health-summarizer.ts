@@ -58,16 +58,16 @@ export async function generateHealthSummary(
     .from('oura_sleep')
     .select('*')
     .eq('user_id', userId)
-    .gte('day', new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-    .order('day', { ascending: false });
+    .gte('date', new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+    .order('date', { ascending: false });
 
-  // Get recent activity data from Strava
+  // Get recent activity data from activities table
   const { data: activityData } = await supabase
-    .from('strava_activities')
+    .from('activities')
     .select('*')
     .eq('user_id', userId)
-    .gte('start_date', new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString())
-    .order('start_date', { ascending: false });
+    .gte('start_time', new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString())
+    .order('start_time', { ascending: false });
 
   // Generate summaries
   const recent = await analyzeRecentTrends(sleepData?.slice(0, 3) || [], activityData?.slice(0, 7) || []);
@@ -91,9 +91,9 @@ export async function generateHealthSummary(
 async function analyzeRecentTrends(sleepData: any[], activityData: any[]): Promise<RecentTrends> {
   // Analyze last 3 days of sleep
   const recentSleep = sleepData.slice(0, 3);
-  const sleepEfficiencies = recentSleep.map(s => s.efficiency || 0);
-  const hrvValues = recentSleep.map(s => s.heart_rate_variability || 0).filter(h => h > 0);
-  const rhrValues = recentSleep.map(s => s.lowest_heart_rate || 0).filter(r => r > 0);
+  const sleepEfficiencies = recentSleep.map(s => s.sleep_efficiency || 0);
+  const hrvValues = recentSleep.map(s => s.hrv_avg || 0).filter(h => h > 0);
+  const rhrValues = recentSleep.map(s => s.resting_heart_rate || 0).filter(r => r > 0);
 
   // Calculate trends
   const sleepTrend = calculateTrend(sleepEfficiencies);
@@ -102,7 +102,7 @@ async function analyzeRecentTrends(sleepData: any[], activityData: any[]): Promi
 
   // Training load analysis
   const recentActivities = activityData.slice(0, 7);
-  const totalTSS = recentActivities.reduce((sum, a) => sum + (a.training_stress_score || a.suffer_score || 0), 0);
+  const totalTSS = recentActivities.reduce((sum, a) => sum + (a.tss_estimated || 0), 0);
   const avgWeeklyTSS = totalTSS; // This week's TSS
 
   // Recovery markers
