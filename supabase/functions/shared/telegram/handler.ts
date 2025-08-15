@@ -21,6 +21,8 @@ export async function handleTelegramUpdate(
     }
   } catch (error) {
     console.error("Error handling Telegram update:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Update that caused error:", JSON.stringify(update, null, 2));
     
     // Send error message to user if possible
     const chatId = update.message?.chat.id || update.callback_query?.message?.chat.id;
