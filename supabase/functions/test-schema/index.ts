@@ -17,13 +17,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check providers table schema using direct query
+    // Use direct SQL queries to get schema information
     console.log('Checking providers table schema...');
     const { data: providersSchema, error: providersError } = await supabase
-      .from('information_schema.columns')
-      .select('column_name, data_type, is_nullable, ordinal_position')
-      .eq('table_name', 'providers')
-      .order('ordinal_position');
+      .rpc('sql', { 
+        query: `
+          SELECT column_name, data_type, is_nullable, column_default
+          FROM information_schema.columns 
+          WHERE table_name = 'providers' AND table_schema = 'public'
+          ORDER BY ordinal_position;
+        ` 
+      });
 
     console.log('Providers schema:', providersSchema);
     if (providersError) console.log('Providers schema error:', providersError);
@@ -31,13 +35,32 @@ serve(async (req) => {
     // Check users table schema
     console.log('Checking users table schema...');
     const { data: usersSchema, error: usersError } = await supabase
-      .from('information_schema.columns')
-      .select('column_name, data_type, is_nullable, ordinal_position')
-      .eq('table_name', 'users')
-      .order('ordinal_position');
+      .rpc('sql', { 
+        query: `
+          SELECT column_name, data_type, is_nullable, column_default
+          FROM information_schema.columns 
+          WHERE table_name = 'users' AND table_schema = 'public'
+          ORDER BY ordinal_position;
+        ` 
+      });
 
     console.log('Users schema:', usersSchema);
     if (usersError) console.log('Users schema error:', usersError);
+
+    // Check oura_sleep table schema  
+    console.log('Checking oura_sleep table schema...');
+    const { data: ouraSchema, error: ouraError } = await supabase
+      .rpc('sql', { 
+        query: `
+          SELECT column_name, data_type, is_nullable, column_default
+          FROM information_schema.columns 
+          WHERE table_name = 'oura_sleep' AND table_schema = 'public'
+          ORDER BY ordinal_position;
+        ` 
+      });
+
+    console.log('Oura sleep schema:', ouraSchema);
+    if (ouraError) console.log('Oura sleep schema error:', ouraError);
 
     // Also try a simple test query to see if the tables exist and are accessible
     const { data: providerTest, error: providerTestError } = await supabase
