@@ -75,7 +75,7 @@ serve(async (req) => {
       // Get user's health data and providers
       console.log('DEBUG: Fetching health data for user:', user.id);
       
-      const [sleepData, activityData, providers] = await Promise.all([
+      const [sleepData, activityData, ouraActivityData, providers] = await Promise.all([
         supabase
           .from('oura_sleep')
           .select('*')
@@ -91,6 +91,13 @@ serve(async (req) => {
           .order('start_date', { ascending: false })
           .limit(50),
         supabase
+          .from('oura_activities')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('day', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          .order('day', { ascending: false })
+          .limit(50),
+        supabase
           .from('providers')
           .select('provider, is_active, created_at, updated_at')
           .eq('user_id', user.id)
@@ -101,6 +108,8 @@ serve(async (req) => {
         sleep_error: sleepData.error?.message,
         activity_count: activityData.data?.length || 0,
         activity_error: activityData.error?.message,
+        oura_activity_count: ouraActivityData.data?.length || 0,
+        oura_activity_error: ouraActivityData.error?.message,
         provider_count: providers.data?.length || 0,
         provider_error: providers.error?.message
       });
@@ -119,11 +128,18 @@ serve(async (req) => {
         },
         sleep_data: sleepData.data || [],
         activities: activityData.data || [],
+        oura_activities: ouraActivityData.data || [],
         providers: providers.data || [],
         debug_info: {
           lookup_method: 'telegram_id_direct',
           validation_skipped: true,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          table_counts: {
+            sleep: sleepData.data?.length || 0,
+            activities: activityData.data?.length || 0,
+            oura_activities: ouraActivityData.data?.length || 0,
+            providers: providers.data?.length || 0
+          }
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
