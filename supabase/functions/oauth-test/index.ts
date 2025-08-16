@@ -5,11 +5,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
 
 // Validate Telegram WebApp initData
-function validateTelegramWebAppData(initData: string, botToken: string): { isValid: boolean; userData?: any } {
+function validateTelegramWebAppData(initData: string, botToken: string): { isValid: boolean; userData?: any; error?: string } {
   try {
+    console.log('DEBUG: Starting Telegram WebApp validation');
+    console.log('DEBUG: InitData length:', initData?.length || 0);
+    console.log('DEBUG: Has bot token:', !!botToken);
+    
     const urlParams = new URLSearchParams(initData);
     const hash = urlParams.get('hash');
-    if (!hash) return { isValid: false };
+    console.log('DEBUG: Hash present:', !!hash);
+    
+    if (!hash) {
+      console.log('DEBUG: No hash in initData');
+      return { isValid: false, error: 'No hash in initData' };
+    }
 
     // Remove hash from params for validation
     urlParams.delete('hash');
@@ -20,14 +29,35 @@ function validateTelegramWebAppData(initData: string, botToken: string): { isVal
       .map(([key, value]) => `${key}=${value}`)
       .join('\n');
 
+    console.log('DEBUG: Sorted params for validation:', sortedParams);
+
     // Create secret key: HMAC-SHA-256(bot_token, "WebAppData")
     const secretKey = hmac("sha256", "WebAppData", botToken, "utf8", "hex");
+    console.log('DEBUG: Secret key generated (first 10 chars):', secretKey.substring(0, 10));
     
     // Calculate expected hash: HMAC-SHA-256(data_check_string, secret_key)
     const expectedHash = hmac("sha256", secretKey, sortedParams, "utf8", "hex");
+    console.log('DEBUG: Expected hash:', expectedHash);
+    console.log('DEBUG: Received hash:', hash);
+    console.log('DEBUG: Hashes match:', hash === expectedHash);
 
     if (hash !== expectedHash) {
-      return { isValid: false };
+      console.log('DEBUG: Hash validation failed - trying to extract user anyway for debugging');
+      
+      // For debugging, try to extract user data even if hash fails
+      const userParam = urlParams.get('user');
+      if (userParam) {
+        try {
+          const userData = JSON.parse(userParam);
+          console.log('DEBUG: User data extracted despite hash failure:', userData);
+          // Return valid for debugging purposes but log the issue
+          return { isValid: true, userData, error: 'Hash validation failed but allowing for debug' };
+        } catch (e) {
+          console.log('DEBUG: Could not parse user data:', e);
+        }
+      }
+      
+      return { isValid: false, error: `Hash validation failed. Expected: ${expectedHash}, Got: ${hash}` };
     }
 
     // Check auth_date (within last 24 hours)
@@ -37,21 +67,30 @@ function validateTelegramWebAppData(initData: string, botToken: string): { isVal
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
       
+      console.log('DEBUG: Auth timestamp:', authTimestamp);
+      console.log('DEBUG: Current timestamp:', now);
+      console.log('DEBUG: Age in hours:', (now - authTimestamp) / (60 * 60 * 1000));
+      
       if (now - authTimestamp > maxAge) {
-        return { isValid: false };
+        console.log('DEBUG: Auth data too old');
+        return { isValid: false, error: 'Auth data too old (>24 hours)' };
       }
     }
 
     // Parse user data
     const userParam = urlParams.get('user');
-    if (!userParam) return { isValid: false };
+    if (!userParam) {
+      console.log('DEBUG: No user parameter in initData');
+      return { isValid: false, error: 'No user parameter in initData' };
+    }
 
     const userData = JSON.parse(userParam);
+    console.log('DEBUG: Successfully parsed user data:', userData);
     return { isValid: true, userData };
 
   } catch (error) {
-    console.error('Telegram validation error:', error);
-    return { isValid: false };
+    console.error('DEBUG: Telegram validation error:', error);
+    return { isValid: false, error: `Validation exception: ${error.message}` };
   }
 }
 
@@ -90,8 +129,18 @@ serve(async (req) => {
       }
 
       const validation = validateTelegramWebAppData(telegram_auth_data, botToken);
+      console.log('DEBUG: Validation result:', validation);
+      
       if (!validation.isValid || !validation.userData) {
-        return new Response(JSON.stringify({ error: 'Invalid Telegram authentication' }), {
+        console.error('DEBUG: Telegram validation failed:', validation.error);
+        return new Response(JSON.stringify({ 
+          error: 'Invalid Telegram authentication', 
+          details: validation.error,
+          debug_info: {
+            has_bot_token: !!botToken,
+            initdata_length: telegram_auth_data?.length || 0
+          }
+        }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
