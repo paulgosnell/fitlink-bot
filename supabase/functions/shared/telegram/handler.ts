@@ -454,7 +454,7 @@ function formatDashboardSummary(data: any, user: any): string {
 
 async function generateWebAppUrl(userId: string, supabase: SupabaseClient): Promise<string> {
   // Return Web App URL directly - authentication handled via Telegram Web App API
-  return `https://fitlinkbot.netlify.app/dashboard.html`;
+  return `https://fitlinkbot.netlify.app/debug-dashboard.html`;
 }
 
 async function generateDashboardToken(userId: string, supabase: SupabaseClient): Promise<string> {

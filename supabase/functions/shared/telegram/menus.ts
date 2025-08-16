@@ -134,7 +134,7 @@ export async function showWebAppDashboard(
   chatId: number,
   user: User
 ): Promise<void> {
-  const webAppUrl = `${Deno.env.get('WEBAPP_URL')}/dashboard?user_id=${user.id}`;
+  const webAppUrl = `https://fitlinkbot.netlify.app/debug-dashboard.html?user_id=${user.id}`;
   
   const message = `📱 **Dashboard**
 
