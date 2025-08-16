@@ -207,6 +207,28 @@ fi
 
 echo "================================="
 
+echo -e "\n${RED}🚨 CRITICAL UUID/BIGINT VALIDATION:${NC}"
+echo "💡 To prevent OAuth bigint errors, verify critical field types:"
+echo ""
+echo "📝 Run this SQL query to check schema:"
+echo "SELECT table_name, column_name, data_type"
+echo "FROM information_schema.columns" 
+echo "WHERE table_name IN ('users', 'providers')"
+echo "AND column_name IN ('id', 'user_id', 'telegram_id')"
+echo "ORDER BY table_name, column_name;"
+echo ""
+echo -e "${YELLOW}Expected results:${NC}"
+echo "  users        | id          | uuid"
+echo "  users        | telegram_id | bigint"  
+echo "  providers    | id          | uuid"
+echo "  providers    | user_id     | uuid    ← CRITICAL!"
+echo ""
+echo -e "${RED}🔥 If providers.user_id shows 'bigint' instead of 'uuid':${NC}"
+echo "   Apply fix: supabase/migrations/20250816000000_fix_providers_schema.sql"
+echo "   This prevents: 'invalid input syntax for type bigint' OAuth errors"
+
+echo -e "\n================================="
+
 # Exit with appropriate code
 if [ $ERRORS -gt 0 ]; then
     exit 1

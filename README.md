@@ -234,6 +234,7 @@ Prevent data mismatch bugs with automated validation:
 - **"Invalid input syntax for type bigint"** - Check field mappings in [Database Schema](docs/DATABASE_SCHEMA.md)
 - **OAuth redirect failures** - Verify URLs in [Architecture Guide](docs/FITLINK_ARCHITECTURE.md)
 - **Data sync errors** - Run schema validation and check field transformations
+- **⚠️ CRITICAL: UUID/bigint OAuth errors** - See [Critical Bug Fix Guide](docs/CRITICAL_BUG_FIX_OAUTH_BIGINT_20250816.md)
 
 ### **Key Developer Files**
 - `docs/DATABASE_SCHEMA.md` - Complete schema reference

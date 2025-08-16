@@ -4,13 +4,35 @@
 
 This checklist prevents the common issues that break Fitlink Bot. **Check every box before deployment.**
 
-## 🔍 **STEP 1: Run Validation Script (REQUIRED)**
+## 🔍 **STEP 1: Run Validation Scripts (REQUIRED)**
 
+### ✅ **1.1 Critical Configuration Validation**
 ```bash
 ./scripts/validate-critical-config.sh
 ```
-
 **Result must be:** ✅ `System should work` or `ALL CHECKS PASSED`
+
+### ✅ **1.2 Schema Validation (PREVENTS OAUTH BIGINT ERRORS)**
+```bash
+./scripts/validate-schema.sh
+```
+**Result must be:** ✅ No critical schema issues
+
+**🚨 CRITICAL CHECK**: Verify UUID/bigint field types:
+```sql
+SELECT table_name, column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name IN ('users', 'providers') 
+AND column_name IN ('id', 'user_id', 'telegram_id');
+```
+
+**Expected Results:**
+- `users.id`: uuid ✅
+- `users.telegram_id`: bigint ✅  
+- `providers.id`: uuid ✅
+- `providers.user_id`: uuid ✅ **← CRITICAL!**
+
+**🔥 If `providers.user_id` shows `bigint`**: Apply migration `20250816000000_fix_providers_schema.sql`
 
 ❌ **If you see "CRITICAL ERRORS FOUND" - STOP! Fix errors before proceeding.**
 
