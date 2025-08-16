@@ -40,10 +40,12 @@
             try {
                 console.log('Testing API endpoint...');
                 
-                const response = await fetch('/oauth-test/user-lookup', {
+                const response = await fetch(`/oauth-test/user-lookup?t=${Date.now()}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache',
+                        'X-Debug-Request': Date.now().toString()
                     },
                     body: JSON.stringify({
                         telegram_id: userData.id,
