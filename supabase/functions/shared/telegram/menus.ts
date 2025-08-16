@@ -31,7 +31,7 @@ ${user.paused_until ? '⏸️ Briefings paused' : '▶️ Briefings active'}
   const keyboard: TelegramInlineKeyboardMarkup = {
     inline_keyboard: [
       [{ text: "📊 Get Briefing Now", callback_data: "brief_now" }],
-      [{ text: "📱 View Dashboard", web_app: { url: "https://fitlinkbot.netlify.app/debug-dashboard.html?v=1.1" } }],
+      [{ text: "📱 View Dashboard", web_app: { url: "https://fitlinkbot.netlify.app/dashboard-v123.html" } }],
       [
         { text: "🔗 Connections", callback_data: "connections" },
         { text: "⚙️ Settings", callback_data: "settings" }
@@ -134,7 +134,7 @@ export async function showWebAppDashboard(
   chatId: number,
   user: User
 ): Promise<void> {
-  const webAppUrl = `https://fitlinkbot.netlify.app/debug-dashboard.html?v=1.1&user_id=${user.id}`;
+  const webAppUrl = `https://fitlinkbot.netlify.app/dashboard-v123.html?user_id=${user.id}`;
   
   const message = `📱 **Dashboard**
 
