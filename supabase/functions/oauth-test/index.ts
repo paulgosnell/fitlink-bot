@@ -87,7 +87,8 @@ serve(async (req) => {
           .from('activities')
           .select('*')
           .eq('user_id', user.id)
-          .order('start_time', { ascending: false })
+          .gte('date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          .order('date', { ascending: false })
           .limit(50),
         supabase
           .from('oura_daily_activity')
