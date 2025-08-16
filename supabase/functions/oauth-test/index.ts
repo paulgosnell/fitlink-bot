@@ -157,7 +157,7 @@ serve(async (req) => {
       );
     }
 
-    // Check actual database schema
+    // Check actual database schema by trying queries
     if (url.searchParams.get('check') === 'schema') {
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
@@ -165,16 +165,31 @@ serve(async (req) => {
       );
 
       try {
-        // Check what tables actually exist by querying information_schema
-        const { data: tables, error: tablesError } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_schema', 'public')
-          .in('table_name', ['users', 'activities', 'oura_sleep', 'oura_daily_activity', 'oura_workouts', 'providers']);
+        // Test queries on potential tables to see which exist
+        const tableTests = [
+          { name: 'users', query: supabase.from('users').select('id').limit(1) },
+          { name: 'activities', query: supabase.from('activities').select('id').limit(1) },
+          { name: 'oura_sleep', query: supabase.from('oura_sleep').select('id').limit(1) },
+          { name: 'oura_daily_activity', query: supabase.from('oura_daily_activity').select('id').limit(1) },
+          { name: 'oura_workouts', query: supabase.from('oura_workouts').select('id').limit(1) },
+          { name: 'providers', query: supabase.from('providers').select('id').limit(1) }
+        ];
+
+        const results = await Promise.all(
+          tableTests.map(async (test) => {
+            try {
+              const result = await test.query;
+              return { table: test.name, exists: true, error: null };
+            } catch (error) {
+              return { table: test.name, exists: false, error: error.message };
+            }
+          })
+        );
 
         return new Response(JSON.stringify({
-          actual_tables: tables || [],
-          tables_error: tablesError?.message,
+          table_status: results,
+          existing_tables: results.filter(r => r.exists).map(r => r.table),
+          missing_tables: results.filter(r => !r.exists).map(r => r.table),
           timestamp: new Date().toISOString()
         }, null, 2), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
