@@ -184,7 +184,23 @@ serve(async (req) => {
       });
     }
 
-    // Debug environment variables (for GET requests)
+    // Check if this is likely a user accessing the wrong endpoint
+    const userAgent = req.headers.get('user-agent') || '';
+    const isTelegramWebApp = userAgent.includes('Telegram') || req.headers.get('x-telegram-webapp');
+    
+    if (isTelegramWebApp) {
+      // If this looks like a Telegram WebApp user hitting the wrong endpoint, give them a helpful message
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        message: 'Please use the dashboard through the Telegram bot.',
+        redirect: 'telegram'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Debug environment variables (for development/admin access)
     const envCheck = {
       TELEGRAM_BOT_TOKEN: Deno.env.get("TELEGRAM_BOT_TOKEN") ? "SET" : "NOT_SET",
       OURA_CLIENT_ID: Deno.env.get("OURA_CLIENT_ID") ? "SET" : "NOT_SET",
