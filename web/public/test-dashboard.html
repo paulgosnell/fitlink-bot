@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitlink Test Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .debug-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        .error {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            color: #c53030;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #5a6fd8;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Fitlink Debug Dashboard</h1>
+            <p>Test dashboard for debugging data loading issues</p>
+        </div>
+
+        <div class="card">
+            <h3>Test User Data Loading</h3>
+            <div class="input-group">
+                <label for="telegramId">Telegram ID:</label>
+                <input type="number" id="telegramId" placeholder="Enter telegram_id to test with" value="">
+            </div>
+            <button id="loadDataBtn" onclick="loadUserData()">Load User Data</button>
+        </div>
+
+        <div id="debugOutput" class="debug-section">Ready to test...</div>
+
+        <div id="errorMessage" class="error" style="display: none;"></div>
+
+        <div id="userData" class="card" style="display: none;">
+            <h3>User Information</h3>
+            <div id="userInfo"></div>
+        </div>
+
+        <div id="healthData" class="card" style="display: none;">
+            <h3>Health Data Summary</h3>
+            <div id="healthSummary"></div>
+        </div>
+
+        <div id="providersData" class="card" style="display: none;">
+            <h3>Connected Providers</h3>
+            <div id="providersList"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const debugOutput = document.getElementById('debugOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            debugOutput.textContent += `[${timestamp}] ${message}\n`;
+            debugOutput.scrollTop = debugOutput.scrollHeight;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        async function loadUserData() {
+            const telegramId = document.getElementById('telegramId').value;
+            
+            if (!telegramId) {
+                showError('Please enter a Telegram ID');
+                return;
+            }
+
+            hideError();
+            const btn = document.getElementById('loadDataBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            try {
+                log(`Testing with telegram_id: ${telegramId}`);
+                
+                const response = await fetch('/oauth-test/user-lookup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        telegram_id: parseInt(telegramId)
+                    })
+                });
+
+                log(`Response status: ${response.status}`);
+                
+                const data = await response.json();
+                log(`Response data: ${JSON.stringify(data, null, 2)}`);
+
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+
+                displayUserData(data);
+
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                showError(`Failed to load user data: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Load User Data';
+            }
+        }
+
+        function displayUserData(data) {
+            // Show user info
+            const userDiv = document.getElementById('userData');
+            const userInfoDiv = document.getElementById('userInfo');
+            userInfoDiv.innerHTML = `
+                <p><strong>Name:</strong> ${data.user.first_name} ${data.user.last_name || ''}</p>
+                <p><strong>Username:</strong> @${data.user.username || 'N/A'}</p>
+                <p><strong>Telegram ID:</strong> ${data.user.telegram_id}</p>
+                <p><strong>City:</strong> ${data.user.city || 'N/A'}</p>
+                <p><strong>Timezone:</strong> ${data.user.timezone || 'N/A'}</p>
+                <p><strong>Briefing Hour:</strong> ${data.user.briefing_hour || 'N/A'}</p>
+                <p><strong>Joined:</strong> ${new Date(data.user.created_at).toLocaleDateString()}</p>
+            `;
+            userDiv.style.display = 'block';
+
+            // Show health data summary
+            const healthDiv = document.getElementById('healthData');
+            const healthSummaryDiv = document.getElementById('healthSummary');
+            healthSummaryDiv.innerHTML = `
+                <p><strong>Sleep Records:</strong> ${data.sleep_data?.length || 0} entries</p>
+                <p><strong>Activity Records:</strong> ${data.activities?.length || 0} entries</p>
+                ${data.sleep_data?.length > 0 ? `
+                    <p><strong>Latest Sleep:</strong> ${data.sleep_data[0].date} (${data.sleep_data[0].total_sleep_minutes || 'N/A'} minutes)</p>
+                ` : ''}
+                ${data.activities?.length > 0 ? `
+                    <p><strong>Latest Activity:</strong> ${new Date(data.activities[0].start_date).toLocaleDateString()}</p>
+                ` : ''}
+            `;
+            healthDiv.style.display = 'block';
+
+            // Show providers
+            const providersDiv = document.getElementById('providersData');
+            const providersListDiv = document.getElementById('providersList');
+            if (data.providers?.length > 0) {
+                providersListDiv.innerHTML = data.providers.map(provider => `
+                    <p><strong>${provider.provider}:</strong> ${provider.is_active ? '✅ Active' : '❌ Inactive'} 
+                    (Connected: ${new Date(provider.created_at).toLocaleDateString()})</p>
+                `).join('');
+            } else {
+                providersListDiv.innerHTML = '<p>No providers connected</p>';
+            }
+            providersDiv.style.display = 'block';
+
+            log('Data displayed successfully!');
+        }
+
+        // Initialize
+        log('Debug dashboard loaded');
+        log('Ready to test user data loading');
+    </script>
+</body>
+</html>
