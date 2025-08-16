@@ -22,6 +22,10 @@
   path = "/oauth-test/*"
 
 [[edge_functions]]
+  function = "oauth-test-proxy"
+  path = "/oauth-test-nocache/*"
+
+[[edge_functions]]
   function = "test-schema-proxy"
   path = "/test-schema/*"
 

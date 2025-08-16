@@ -3,7 +3,7 @@ export default async (request, context) => {
   const SUPABASE_ANON_KEY = context.env.VITE_SUPABASE_ANON_KEY || context.env.SUPABASE_ANON_KEY;
 
   const url = new URL(request.url);
-  const path = url.pathname.replace(/^\/oauth-test/, '/oauth-test');
+  const path = url.pathname.replace(/^\/oauth-test(-nocache)?/, '/oauth-test');
   const targetUrl = `${SUPABASE_URL}/functions/v1${path}${url.search}`;
 
   const init = {
@@ -27,13 +27,16 @@ export default async (request, context) => {
     status: response.status,
     headers: {
       'Content-Type': contentType,
-      'Cache-Control': 'no-cache'
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Debug-Timestamp': Date.now().toString()
     }
   });
 };
 
 export const config = {
-  path: ['/oauth-test', '/oauth-test/*']
+  path: ['/oauth-test', '/oauth-test/*', '/oauth-test-nocache', '/oauth-test-nocache/*']
 };
 
 

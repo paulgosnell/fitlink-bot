@@ -40,7 +40,7 @@
             try {
                 console.log('Testing API endpoint...');
                 
-                const response = await fetch(`/oauth-test/user-lookup?t=${Date.now()}`, {
+                const response = await fetch(`/oauth-test-nocache/user-lookup?cache=${Date.now()}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
