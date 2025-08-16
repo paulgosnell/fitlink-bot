@@ -160,7 +160,9 @@ serve(async (req) => {
     try {
       const userId = url.searchParams.get('user_id');
       const clientId = Deno.env.get('STRAVA_CLIENT_ID');
-      // CRITICAL: Always use Netlify URL for OAuth callbacks (not Supabase direct URL)
+      // 🚨 CRITICAL: Always use Netlify URL for OAuth callbacks (not Supabase direct URL)
+      // 🔒 DO NOT CHANGE: Must be hardcoded to "https://fitlinkbot.netlify.app"
+      // ❌ NEVER USE: BASE_URL env var (will break OAuth flow)
       const baseUrl = "https://fitlinkbot.netlify.app";
 
       if (!userId) return new Response(JSON.stringify({ error: 'Missing user_id' }), { status: 400, headers: corsHeaders });
@@ -197,6 +199,9 @@ serve(async (req) => {
 async function exchangeCodeForTokens(code: string) {
   const clientId = Deno.env.get('STRAVA_CLIENT_ID');
   const clientSecret = Deno.env.get('STRAVA_CLIENT_SECRET');
+  // 🚨 CRITICAL: Must use same hardcoded URL as in /start endpoint
+  // 🔒 DO NOT CHANGE: Must be hardcoded to "https://fitlinkbot.netlify.app"  
+  // ❌ NEVER USE: BASE_URL env var (will break token exchange)
   const baseUrl = "https://fitlinkbot.netlify.app";
   const redirectUri = `${baseUrl}/oauth-strava/callback`;
 

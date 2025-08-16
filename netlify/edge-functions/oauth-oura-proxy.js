@@ -1,7 +1,13 @@
 export default async (request, context) => {
   try {
-    // Get environment variables with fallbacks
+    // 🚨 CRITICAL PROXY CONFIGURATION - DO NOT MODIFY
+    // 🔒 This URL is hardcoded to match Supabase project - DO NOT USE ENV VAR
+    // ❌ NEVER CHANGE: This must match the exact Supabase project URL
     const SUPABASE_URL = 'https://umixefoxgjmdlvvtfnmr.supabase.co';
+    
+    // 🚨 CRITICAL: Multiple env var access methods required for compatibility
+    // 🔒 DO NOT REMOVE: Netlify requires VITE_SUPABASE_ANON_KEY specifically
+    // ❌ NEVER SIMPLIFY: Multiple fallbacks prevent deployment failures
     const SUPABASE_ANON_KEY = 
       context?.env?.VITE_SUPABASE_ANON_KEY || 
       context?.env?.SUPABASE_ANON_KEY ||

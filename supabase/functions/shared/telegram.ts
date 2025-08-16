@@ -1069,9 +1069,9 @@ async function handleSyncOura(chatId: number, userId: number, supabase: any, bot
       return;
     }
 
-    // Call the data sync function
-    const baseUrl = Deno.env.get("BASE_URL");
-    const syncResponse = await fetch(`${baseUrl}/functions/v1/data-sync-oura`, {
+    // Call the data sync function - CRITICAL: Use Supabase URL for function-to-function calls
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const syncResponse = await fetch(`${supabaseUrl}/functions/v1/data-sync-oura`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1120,9 +1120,9 @@ async function handleSyncStrava(chatId: number, userId: number, supabase: any, b
       return;
     }
 
-    // Call the data sync function
-    const baseUrl = Deno.env.get("BASE_URL");
-    const syncResponse = await fetch(`${baseUrl}/functions/v1/data-sync-strava`, {
+    // Call the data sync function - CRITICAL: Use Supabase URL for function-to-function calls
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const syncResponse = await fetch(`${supabaseUrl}/functions/v1/data-sync-strava`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

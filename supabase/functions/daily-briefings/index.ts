@@ -149,7 +149,7 @@ function calculateLocalHour(utcHour: number, timezone: string): number {
 
 // Helper function to test the cron job manually
 export async function testCronJob() {
-  const request = new Request("http://localhost/test");
+  const request = new Request("https://example.com/test");
   return serve(async () => {
     console.log("Running test cron job...");
     return new Response("Test completed");

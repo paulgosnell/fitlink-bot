@@ -232,7 +232,9 @@ serve(async (req) => {
     try {
       const userId = url.searchParams.get('user_id');
       const clientId = Deno.env.get("OURA_CLIENT_ID");
-      // CRITICAL: Always use Netlify URL for OAuth callbacks (not Supabase direct URL)
+      // 🚨 CRITICAL: Always use Netlify URL for OAuth callbacks (not Supabase direct URL)
+      // 🔒 DO NOT CHANGE: Must be hardcoded to "https://fitlinkbot.netlify.app"
+      // ❌ NEVER USE: BASE_URL env var (will break OAuth flow)
       const baseUrl = "https://fitlinkbot.netlify.app";
       
       console.log('OAuth start received user_id:', userId, 'Type:', typeof userId, 'IsUUID:', /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId || ''));
@@ -265,6 +267,9 @@ serve(async (req) => {
 async function exchangeCodeForTokens(code: string) {
   const clientId = Deno.env.get('OURA_CLIENT_ID');
   const clientSecret = Deno.env.get('OURA_CLIENT_SECRET');
+  // 🚨 CRITICAL: Must use same hardcoded URL as in /start endpoint
+  // 🔒 DO NOT CHANGE: Must be hardcoded to "https://fitlinkbot.netlify.app"  
+  // ❌ NEVER USE: BASE_URL env var (will break token exchange)
   const baseUrl = "https://fitlinkbot.netlify.app";
   const redirectUri = `${baseUrl}/oauth-oura/callback`;
 
