@@ -105,7 +105,15 @@ supabase functions deploy oauth-oura --no-verify-jwt
 supabase functions deploy oauth-strava --no-verify-jwt
 ```
 
-### 5. **Set Telegram Webhook**
+### 5. **Validate Schema (Recommended)**
+```bash
+# Run schema validation to prevent data mismatches
+./scripts/validate-schema.sh
+
+# Should show: "✅ Schema validation completed successfully"
+```
+
+### 6. **Set Telegram Webhook**
 ```bash
 curl -X POST "https://api.telegram.org/bot{BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
@@ -177,6 +185,14 @@ Find your bot on Telegram: `@your_bot_username`
 4. Try: "Should I exercise today?"
 5. Request: `/brief` for daily summary
 
+## 📚 **Documentation & Schema Reference**
+
+- **[Database Schema Reference](docs/DATABASE_SCHEMA.md)** - Complete table definitions and field mappings
+- **[Schema Quick Reference](docs/SCHEMA_QUICK_REF.md)** - Developer quick-start guide
+- **[Schema Validation](scripts/validate-schema.sh)** - Prevent data mismatch bugs
+- **[Architecture Guide](docs/FITLINK_ARCHITECTURE.md)** - System architecture overview
+- **[Deployment Checklist](docs/DEPLOYMENT_SAFETY_CHECKLIST.md)** - Pre-deployment validation
+
 ## 🌐 **Web Dashboard**
 
 A beautiful landing page showcasing your bot's features:
@@ -198,7 +214,34 @@ A beautiful landing page showcasing your bot's features:
 
 The web dashboard is **purely informational** - all bot functionality runs serverlessly on Supabase Edge Functions. No backend hosting required!
 
-## 🚀 **Zero-Server Architecture**
+## �️ **Development & Troubleshooting**
+
+### **Schema Validation Tools**
+Prevent data mismatch bugs with automated validation:
+
+```bash
+# Validate database schema against TypeScript interfaces
+./scripts/validate-schema.sh
+
+# Check critical configuration
+./scripts/validate-critical-config.sh
+
+# Run post-deployment smoke tests
+./scripts/smoke-tests.sh
+```
+
+### **Common Issues**
+- **"Invalid input syntax for type bigint"** - Check field mappings in [Database Schema](docs/DATABASE_SCHEMA.md)
+- **OAuth redirect failures** - Verify URLs in [Architecture Guide](docs/FITLINK_ARCHITECTURE.md)
+- **Data sync errors** - Run schema validation and check field transformations
+
+### **Key Developer Files**
+- `docs/DATABASE_SCHEMA.md` - Complete schema reference
+- `docs/SCHEMA_QUICK_REF.md` - Quick field mapping guide
+- `supabase/functions/shared/types.ts` - TypeScript interfaces
+- `scripts/validate-schema.sh` - Schema validation tool
+
+## �🚀 **Zero-Server Architecture**
 
 Your entire Fitlink Bot runs without traditional servers:
 

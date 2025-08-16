@@ -102,6 +102,12 @@ export async function createOrUpdateProvider(
 
   if (existing) {
     console.log('DEBUG: Updating existing provider with ID:', existing.id);
+    console.log('DEBUG: Update data structure:', JSON.stringify({
+      ...encryptedData,
+      is_active: true,
+      updated_at: new Date().toISOString()
+    }, null, 2));
+    
     // Update existing provider
     const { data, error } = await supabase
       .from('providers')
@@ -115,7 +121,12 @@ export async function createOrUpdateProvider(
       .single();
 
     if (error) {
-      console.error('DEBUG: Update error:', error);
+      console.error('DEBUG: Update error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
     
@@ -126,6 +137,11 @@ export async function createOrUpdateProvider(
     };
   } else {
     console.log('DEBUG: Creating new provider...');
+    console.log('DEBUG: Insert data structure:', JSON.stringify({
+      ...encryptedData,
+      is_active: true
+    }, null, 2));
+    
     // Create new provider
     const { data, error } = await supabase
       .from('providers')
@@ -137,7 +153,12 @@ export async function createOrUpdateProvider(
       .single();
 
     if (error) {
-      console.error('DEBUG: Insert error:', error);
+      console.error('DEBUG: Insert error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
     

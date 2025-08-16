@@ -68,18 +68,27 @@ serve(async (req) => {
           user_id_type: typeof user.id,
           provider: 'oura',
           provider_user_id_type: typeof tokens.user_id,
-          provider_user_id_value: tokens.user_id
+          provider_user_id_value: tokens.user_id,
+          access_token_type: typeof tokens.access_token,
+          refresh_token_type: typeof tokens.refresh_token,
+          expires_at_type: typeof tokens.expires_at,
+          expires_at_value: tokens.expires_at
         });
+        
+        // Log the exact object being passed
+        const providerData = {
+          user_id: user.id,
+          provider: 'oura' as const,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: tokens.expires_at,
+          provider_user_id: tokens.user_id?.toString(),
+          scopes: ['email', 'personal', 'daily']
+        };
+        console.log('DEBUG: Full provider data object:', JSON.stringify(providerData, null, 2));
+        
         try {
-          await createOrUpdateProvider(supabase, {
-            user_id: user.id,
-            provider: 'oura',
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            expires_at: tokens.expires_at,
-            provider_user_id: tokens.user_id?.toString(),
-            scopes: ['email', 'personal', 'daily']
-          });
+          await createOrUpdateProvider(supabase, providerData);
         } catch (providerError) {
           console.error('Error in createOrUpdateProvider:', providerError);
           console.error('Provider Error Details:', {
