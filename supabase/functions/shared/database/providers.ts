@@ -67,6 +67,15 @@ export async function createOrUpdateProvider(
     scopes?: string[];
   }
 ): Promise<Provider> {
+  console.log('DEBUG createOrUpdateProvider called with:', {
+    user_id: providerData.user_id,
+    user_id_type: typeof providerData.user_id,
+    provider: providerData.provider,
+    provider_user_id: providerData.provider_user_id,
+    provider_user_id_type: typeof providerData.provider_user_id,
+    scopes: providerData.scopes
+  });
+  
   // Encrypt tokens before storing
   const encryptedData = {
     ...providerData,
@@ -74,7 +83,16 @@ export async function createOrUpdateProvider(
     refresh_token: providerData.refresh_token ? await encryptToken(providerData.refresh_token) : undefined
   };
 
+  console.log('DEBUG encrypted data structure:', {
+    user_id: encryptedData.user_id,
+    user_id_type: typeof encryptedData.user_id,
+    provider: encryptedData.provider,
+    provider_user_id: encryptedData.provider_user_id,
+    provider_user_id_type: typeof encryptedData.provider_user_id
+  });
+
   // Try to update existing provider first
+  console.log('DEBUG: Checking for existing provider...');
   const { data: existing } = await supabase
     .from('providers')
     .select('id')
@@ -83,6 +101,7 @@ export async function createOrUpdateProvider(
     .single();
 
   if (existing) {
+    console.log('DEBUG: Updating existing provider with ID:', existing.id);
     // Update existing provider
     const { data, error } = await supabase
       .from('providers')
@@ -95,7 +114,10 @@ export async function createOrUpdateProvider(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('DEBUG: Update error:', error);
+      throw error;
+    }
     
     return {
       ...data,
@@ -103,6 +125,7 @@ export async function createOrUpdateProvider(
       refresh_token: providerData.refresh_token
     };
   } else {
+    console.log('DEBUG: Creating new provider...');
     // Create new provider
     const { data, error } = await supabase
       .from('providers')
@@ -113,7 +136,10 @@ export async function createOrUpdateProvider(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('DEBUG: Insert error:', error);
+      throw error;
+    }
     
     return {
       ...data,

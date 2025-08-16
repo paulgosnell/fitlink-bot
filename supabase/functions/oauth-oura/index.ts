@@ -63,6 +63,13 @@ serve(async (req) => {
 
         // Store tokens in database
         console.log('Storing tokens in database...');
+        console.log('DEBUG: About to call createOrUpdateProvider with:', {
+          user_id: user.id,
+          user_id_type: typeof user.id,
+          provider: 'oura',
+          provider_user_id_type: typeof tokens.user_id,
+          provider_user_id_value: tokens.user_id
+        });
         try {
           await createOrUpdateProvider(supabase, {
             user_id: user.id,
@@ -75,6 +82,13 @@ serve(async (req) => {
           });
         } catch (providerError) {
           console.error('Error in createOrUpdateProvider:', providerError);
+          console.error('Provider Error Details:', {
+            message: providerError.message,
+            name: providerError.name,
+            code: providerError.code,
+            details: providerError.details,
+            hint: providerError.hint
+          });
           throw new Error(`Step 3 - Provider creation failed: ${providerError.message}`);
         }
 
@@ -439,11 +453,11 @@ async function processSleepData(supabase: any, userId: string, sleepResponse: Re
       .upsert({
         user_id: userId,
         date: date,
-        total_sleep_duration: sleep?.total_sleep_duration ? (sleep.total_sleep_duration / 3600) : null, // Convert seconds to hours
-        deep_sleep_duration: sleep?.deep_sleep_duration ? (sleep.deep_sleep_duration / 3600) : null, // Convert seconds to hours
-        light_sleep_duration: sleep?.light_sleep_duration ? (sleep.light_sleep_duration / 3600) : null, // Convert seconds to hours
-        rem_sleep_duration: sleep?.rem_sleep_duration ? (sleep.rem_sleep_duration / 3600) : null, // Convert seconds to hours
-        sleep_score: readiness?.score || null, // Use readiness score as sleep score
+        total_sleep_minutes: sleep?.total_sleep_duration ? Math.round(sleep.total_sleep_duration / 60) : null, // Convert seconds to minutes
+        deep_sleep_minutes: sleep?.deep_sleep_duration ? Math.round(sleep.deep_sleep_duration / 60) : null, // Convert seconds to minutes
+        light_sleep_minutes: sleep?.light_sleep_duration ? Math.round(sleep.light_sleep_duration / 60) : null, // Convert seconds to minutes
+        rem_sleep_minutes: sleep?.rem_sleep_duration ? Math.round(sleep.rem_sleep_duration / 60) : null, // Convert seconds to minutes
+        sleep_efficiency: readiness?.score || null, // Use readiness score as sleep efficiency
       }, {
         onConflict: 'user_id,date'
       });
