@@ -93,15 +93,20 @@ export async function createOrUpdateProvider(
 
   // Try to update existing provider first
   console.log('DEBUG: Checking for existing provider...');
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('providers')
     .select('id')
     .eq('user_id', providerData.user_id)
     .eq('provider', providerData.provider)
     .single();
 
+  if (lookupError && lookupError.code !== 'PGRST116') {
+    console.error('DEBUG: Lookup error:', lookupError);
+    throw new Error(`Provider lookup failed: ${lookupError.message}`);
+  }
+
   if (existing) {
-    console.log('DEBUG: Updating existing provider with ID:', existing.id);
+    console.log('DEBUG: TAKING UPDATE PATH - Updating existing provider with ID:', existing.id);
     console.log('DEBUG: Update data structure:', JSON.stringify({
       ...encryptedData,
       is_active: true,
@@ -121,13 +126,13 @@ export async function createOrUpdateProvider(
       .single();
 
     if (error) {
-      console.error('DEBUG: Update error details:', {
+      console.error('DEBUG: UPDATE ERROR DETAILS:', {
         message: error.message,
         details: error.details,
         hint: error.hint,
         code: error.code
       });
-      throw error;
+      throw new Error(`Update existing provider failed: ${error.message}`);
     }
     
     return {
@@ -136,7 +141,7 @@ export async function createOrUpdateProvider(
       refresh_token: providerData.refresh_token
     };
   } else {
-    console.log('DEBUG: Creating new provider...');
+    console.log('DEBUG: TAKING INSERT PATH - Creating new provider...');
     console.log('DEBUG: Insert data structure:', JSON.stringify({
       ...encryptedData,
       is_active: true
@@ -153,13 +158,13 @@ export async function createOrUpdateProvider(
       .single();
 
     if (error) {
-      console.error('DEBUG: Insert error details:', {
+      console.error('DEBUG: INSERT ERROR DETAILS:', {
         message: error.message,
         details: error.details,
         hint: error.hint,
         code: error.code
       });
-      throw error;
+      throw new Error(`Create new provider failed: ${error.message}`);
     }
     
     return {
