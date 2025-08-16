@@ -130,6 +130,29 @@ serve(async (req) => {
       });
     }
 
+    // List users endpoint (for GET requests with ?list=users)
+    if (url.searchParams.get('list') === 'users') {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('telegram_id, username, first_name, last_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      return new Response(
+        JSON.stringify({ 
+          users: users || [],
+          error: error?.message,
+          count: users?.length || 0
+        }, null, 2),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Debug endpoint (for GET requests)
     return new Response(
       JSON.stringify({ 
@@ -140,6 +163,10 @@ serve(async (req) => {
         env_check: {
           SUPABASE_URL: Deno.env.get("SUPABASE_URL") ? "SET" : "NOT_SET",
           SUPABASE_SERVICE_ROLE_KEY: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? "SET" : "NOT_SET",
+        },
+        endpoints: {
+          "POST /user-lookup": "Fetch user data by telegram_id",
+          "GET ?list=users": "List recent users"
         },
         timestamp: new Date().toISOString()
       }, null, 2),
