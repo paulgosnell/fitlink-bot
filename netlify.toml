@@ -21,6 +21,10 @@
   function = "oauth-test-proxy"
   path = "/oauth-test/*"
 
+[[edge_functions]]
+  function = "test-schema-proxy"
+  path = "/test-schema/*"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
