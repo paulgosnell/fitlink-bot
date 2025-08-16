@@ -126,7 +126,7 @@ serve(async (req) => {
           .order('date', { ascending: false })
           .limit(30),
         supabase
-          .from('strava_activities')
+          .from('activities')
           .select('*')
           .eq('user_id', user.id)
           .gte('start_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())

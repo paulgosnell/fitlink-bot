@@ -103,9 +103,9 @@ function displayUserData(container, data) {
     // Calculate stats
     const totalActivities = activities.length;
     const avgSleepHours = sleep_data.length > 0 
-        ? (sleep_data.reduce((sum, s) => sum + (s.total_sleep_duration || 0), 0) / sleep_data.length / 3600).toFixed(1)
+        ? (sleep_data.reduce((sum, s) => sum + (s.total_sleep_minutes || 0), 0) / sleep_data.length / 60).toFixed(1)
         : '0';
-    const lastSyncOura = sleep_data.length > 0 ? new Date(sleep_data[0].day).toLocaleDateString() : 'Never';
+    const lastSyncOura = sleep_data.length > 0 ? new Date(sleep_data[0].date).toLocaleDateString() : 'Never';
     const lastSyncStrava = activities.length > 0 ? new Date(activities[0].start_date).toLocaleDateString() : 'Never';
     
     container.innerHTML = `
@@ -183,7 +183,7 @@ function displayUserData(container, data) {
             </div>
         ` : ''}
         
-        <!-- Recent Sleep Data -->
+                <!-- Recent Sleep Data -->
         ${hasOura && sleep_data.length > 0 ? `
             <div class="bg-white rounded-lg shadow-md p-4 mb-4">
                 <h3 class="text-lg font-semibold mb-3">Recent Sleep</h3>
@@ -191,17 +191,17 @@ function displayUserData(container, data) {
                     ${sleep_data.slice(0, 3).map(sleep => `
                         <div class="p-3 bg-gray-50 rounded">
                             <div class="flex justify-between items-center">
-                                <span class="text-sm font-medium">${new Date(sleep.day).toLocaleDateString()}</span>
-                                <span class="text-sm text-gray-600">${(sleep.total_sleep_duration / 3600).toFixed(1)} hrs</span>
+                                <span class="text-sm font-medium">${new Date(sleep.date).toLocaleDateString()}</span>
+                                <span class="text-sm text-gray-600">${((sleep.total_sleep_minutes || 0) / 60).toFixed(1)} hrs</span>
                             </div>
                             <div class="mt-1 text-xs text-gray-500">
-                                Score: ${sleep.score || 'N/A'} | Efficiency: ${sleep.efficiency || 'N/A'}%
+                                Score: ${sleep.readiness_score || 'N/A'} | Efficiency: ${sleep.sleep_efficiency || 'N/A'}%
                             </div>
                         </div>
                     `).join('')}
                 </div>
             </div>
-        ` : ''}
+        ` : ''}`
         
         <!-- Recent Activities -->
         ${hasStrava && activities.length > 0 ? `
