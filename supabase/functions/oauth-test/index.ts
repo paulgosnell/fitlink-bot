@@ -222,6 +222,65 @@ serve(async (req) => {
       }
     }
 
+    // Manual sync trigger
+    if (url.searchParams.get('action') === 'sync' && req.method === 'POST') {
+      const body = await req.json();
+      const userId = body.user_id;
+      
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'Missing user_id' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        // Trigger Oura sync
+        const ouraResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/data-sync-oura`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ user_id: userId })
+        });
+
+        const ouraResult = ouraResponse.ok ? await ouraResponse.json() : { error: await ouraResponse.text() };
+
+        // Trigger Strava sync
+        const stravaResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/data-sync-strava`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ user_id: userId })
+        });
+
+        const stravaResult = stravaResponse.ok ? await stravaResponse.json() : { error: await stravaResponse.text() };
+
+        return new Response(JSON.stringify({
+          message: 'Sync triggered',
+          user_id: userId,
+          oura_sync: {
+            status: ouraResponse.status,
+            result: ouraResult
+          },
+          strava_sync: {
+            status: stravaResponse.status,
+            result: stravaResult
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: String(error) }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // Debug endpoint (for GET requests)
     return new Response(
       JSON.stringify({ 
@@ -236,7 +295,8 @@ serve(async (req) => {
         endpoints: {
           "POST /user-lookup": "Fetch user data by telegram_id",
           "GET ?list=users": "List recent users",
-          "GET ?check=schema": "Check actual database tables"
+          "GET ?check=schema": "Check actual database tables",
+          "POST ?action=sync": "Trigger data sync for user_id"
         },
         timestamp: new Date().toISOString()
       }, null, 2),
