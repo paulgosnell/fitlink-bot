@@ -75,7 +75,7 @@ serve(async (req) => {
       // Get user's health data and providers
       console.log('DEBUG: Fetching health data for user:', user.id);
       
-            const [sleepData, activityData, providers] = await Promise.all([
+            const [sleepData, activityData, dailyActivityData, workoutData, providers] = await Promise.all([
         supabase
           .from('oura_sleep')
           .select('*')
@@ -90,6 +90,20 @@ serve(async (req) => {
           .order('start_time', { ascending: false })
           .limit(50),
         supabase
+          .from('oura_daily_activity')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          .order('date', { ascending: false })
+          .limit(30),
+        supabase
+          .from('oura_workouts')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('start_datetime', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .order('start_datetime', { ascending: false })
+          .limit(50),
+        supabase
           .from('providers')
           .select('provider, is_active, created_at, updated_at')
           .eq('user_id', user.id)
@@ -100,11 +114,13 @@ serve(async (req) => {
         sleep_error: sleepData.error?.message,
         activity_count: activityData.data?.length || 0,
         activity_error: activityData.error?.message,
+        daily_activity_count: dailyActivityData.data?.length || 0,
+        daily_activity_error: dailyActivityData.error?.message,
+        workout_count: workoutData.data?.length || 0,
+        workout_error: workoutData.error?.message,
         provider_count: providers.data?.length || 0,
         provider_error: providers.error?.message
-      });
-
-      return new Response(JSON.stringify({
+      });      return new Response(JSON.stringify({
         user: {
           id: user.id,
           telegram_id: user.telegram_id,
@@ -118,6 +134,8 @@ serve(async (req) => {
         },
         sleep_data: sleepData.data || [],
         activities: activityData.data || [],
+        oura_daily_activity: dailyActivityData.data || [],
+        oura_workouts: workoutData.data || [],
         providers: providers.data || [],
         debug_info: {
           lookup_method: 'telegram_id_direct',
@@ -126,6 +144,8 @@ serve(async (req) => {
           table_counts: {
             sleep: sleepData.data?.length || 0,
             activities: activityData.data?.length || 0,
+            oura_daily_activity: dailyActivityData.data?.length || 0,
+            oura_workouts: workoutData.data?.length || 0,
             providers: providers.data?.length || 0
           }
         }
