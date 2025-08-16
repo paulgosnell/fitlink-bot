@@ -87,7 +87,7 @@ serve(async (req) => {
       });
     }
 
-    const afterEpoch = Math.floor((Date.now() - 1000 * 60 * 60 * 24 * 30) / 1000); // last 30 days
+    const afterEpoch = Math.floor((Date.now() - 1000 * 60 * 60 * 24 * 90) / 1000); // last 90 days
 
     let successCount = 0;
     let errorCount = 0;
