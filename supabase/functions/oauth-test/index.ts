@@ -1,3 +1,5 @@
+/// <reference types="https://esm.sh/@supabase/functions-js/src/edge-runtime.d.ts" />
+
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
@@ -102,6 +104,8 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
 
+      console.log('DEBUG: Looking up user with Telegram ID:', telegramId);
+
       // Look up user by telegram_id
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -109,8 +113,19 @@ serve(async (req) => {
         .eq('telegram_id', telegramId)
         .single();
 
+      console.log('DEBUG: User lookup result:', { user: user ? 'found' : 'not found', error: userError });
+
       if (userError || !user) {
-        return new Response(JSON.stringify({ error: 'User not found', telegram_id: telegramId }), {
+        console.error('DEBUG: User lookup failed:', userError);
+        return new Response(JSON.stringify({ 
+          error: 'User not found', 
+          telegram_id: telegramId, 
+          db_error: userError?.message,
+          debug_info: {
+            has_supabase_url: !!Deno.env.get('SUPABASE_URL'),
+            has_service_key: !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+          }
+        }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
