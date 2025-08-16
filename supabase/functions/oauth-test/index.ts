@@ -231,6 +231,8 @@ serve(async (req) => {
       BASE_URL: Deno.env.get("BASE_URL") ? "SET" : "NOT_SET",
       SUPABASE_URL: Deno.env.get("SUPABASE_URL") ? "SET" : "NOT_SET",
       SUPABASE_SERVICE_ROLE_KEY: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ? "SET" : "NOT_SET",
+      LAST_DEPLOYED: "2025-08-16-15:30:00", // Force function update
+      VALIDATION_DISABLED: "YES" // Confirm validation is disabled
     };
 
     return new Response(
