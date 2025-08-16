@@ -27,8 +27,10 @@ async function initializeDashboard() {
             const initData = telegramWebApp.initDataUnsafe;
             userData = initData?.user;
             
-            if (!userData) {
-                showError(dashboardContent, 'Unable to get user data from Telegram');
+            // Validate that we have proper user data and initData
+            if (!userData || !userData.id || !telegramWebApp.initData) {
+                console.error('Invalid Telegram WebApp data:', { userData, hasInitData: !!telegramWebApp.initData });
+                showError(dashboardContent, 'Unable to get valid user data from Telegram. Please restart the app.');
                 return;
             }
             
@@ -45,7 +47,14 @@ async function initializeDashboard() {
             
         } else {
             console.log('Telegram WebApp not available');
-            showError(dashboardContent, 'This page must be opened from Telegram');
+            console.log('Available globals:', { 
+                hasTelegram: typeof Telegram !== 'undefined',
+                hasWebApp: typeof Telegram !== 'undefined' && !!Telegram.WebApp,
+                userAgent: navigator.userAgent
+            });
+            
+            // Show appropriate error message
+            showError(dashboardContent, 'This page must be opened from Telegram. Please use the /dashboard command in the bot.');
         }
         
     } catch (error) {
@@ -57,39 +66,77 @@ async function initializeDashboard() {
 
 async function fetchAndDisplayUserData(container) {
     try {
+        // Validate required data before making request
+        if (!userData || !userData.id || !telegramWebApp || !telegramWebApp.initData) {
+            console.error('Missing required data for API request:', { 
+                hasUserData: !!userData, 
+                hasUserId: !!userData?.id, 
+                hasWebApp: !!telegramWebApp, 
+                hasInitData: !!telegramWebApp?.initData 
+            });
+            showError(container, 'Invalid session data. Please restart from Telegram.');
+            return;
+        }
+
         // Construct the request with Telegram init data
+        const requestBody = {
+            telegram_id: userData.id,
+            telegram_username: userData.username || userData.first_name,
+            telegram_auth_data: telegramWebApp.initData
+        };
+        
+        console.log('Making request to /oauth-test/user-lookup with user_id:', userData.id);
+        
         const response = await fetch('/oauth-test/user-lookup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                telegram_id: userData.id,
-                telegram_username: userData.username || userData.first_name,
-                telegram_auth_data: telegramWebApp.initData
-            })
+            body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API request failed:', response.status, errorText);
+            
             if (response.status === 404) {
                 showEmptyState(container);
                 return;
+            } else if (response.status === 401) {
+                showError(container, 'Authentication failed. Please restart from Telegram.');
+                return;
             }
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
         
         const data = await response.json();
         console.log('Received data:', data);
         
-        if (data && data.user) {
+        // Check if response is debug info instead of user data
+        if (data && (data.message === "Telegram WebApp authentication service" || data.env)) {
+            console.error('Received debug response instead of user data:', data);
+            showError(container, 'Service configuration error. Please try restarting from Telegram.');
+            return;
+        }
+        
+        // Check if response indicates wrong endpoint usage
+        if (data && data.error && data.redirect === 'telegram') {
+            console.error('Wrong endpoint accessed:', data);
+            showError(container, 'Please access the dashboard through the Telegram bot.');
+            return;
+        }
+        
+        // Check if we have valid user data
+        if (data && data.user && typeof data.user === 'object') {
             displayUserData(container, data);
         } else {
+            console.log('No user data found, showing empty state');
             showEmptyState(container);
         }
         
     } catch (error) {
         console.error('Error fetching user data:', error);
-        showError(container, 'Unable to load your data. Please try again later.');
+        showError(container, 'Unable to load your data. Please check your connection and try again.');
     }
 }
 
