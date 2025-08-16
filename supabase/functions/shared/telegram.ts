@@ -637,7 +637,7 @@ Try asking: "How did I sleep?" or "Should I train today?"`;
           { text: "📊 Daily Briefing", callback_data: "get_briefing" }
         ],
         [
-          { text: "📱 View Dashboard", web_app: { url: `https://fitlinkbot.netlify.app/dashboard.html?user_id=${userId}&t=${Date.now()}` } }
+          { text: "📱 View Dashboard", web_app: { url: `https://fitlinkbot.netlify.app/debug-dashboard.html?user_id=${userId}&t=${Date.now()}` } }
         ],
         [
           { text: "💬 Feedback", callback_data: "feedback" }
