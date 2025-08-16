@@ -144,7 +144,9 @@ serve(async (req) => {
         console.error('Error details:', {
           message: error.message,
           stack: error.stack,
-          name: error.name
+          name: error.name,
+          state: state,
+          code: code?.substring(0, 10) + '...'
         });
         
         const errorHtml = `<!DOCTYPE html>
@@ -195,6 +197,8 @@ serve(async (req) => {
             <strong>Error Details:</strong><br>
             ${error.message || 'Unknown error'}<br><br>
             <strong>Error Type:</strong> ${error.name || 'Error'}<br><br>
+            <strong>State Parameter:</strong> ${state || 'None'}<br><br>
+            <strong>Code Parameter:</strong> ${code?.substring(0, 10) + '...' || 'None'}<br><br>
             <strong>Stack:</strong><br>
             <pre style="white-space: pre-wrap; font-size: 0.8rem;">${(error.stack || '').substring(0, 500)}</pre>
         </div>
