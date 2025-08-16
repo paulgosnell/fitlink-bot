@@ -70,8 +70,8 @@ export async function createOrUpdateProvider(
   // Encrypt tokens before storing
   const encryptedData = {
     ...providerData,
-    access_token: encryptToken(providerData.access_token),
-    refresh_token: providerData.refresh_token ? encryptToken(providerData.refresh_token) : undefined
+    access_token: await encryptToken(providerData.access_token),
+    refresh_token: providerData.refresh_token ? await encryptToken(providerData.refresh_token) : undefined
   };
 
   // Try to update existing provider first
@@ -133,8 +133,8 @@ export async function updateProviderTokens(
   }
 ): Promise<Provider> {
   const encryptedTokens = {
-    access_token: encryptToken(tokens.access_token),
-    refresh_token: tokens.refresh_token ? encryptToken(tokens.refresh_token) : undefined,
+    access_token: await encryptToken(tokens.access_token),
+    refresh_token: tokens.refresh_token ? await encryptToken(tokens.refresh_token) : undefined,
     expires_at: tokens.expires_at,
     updated_at: new Date().toISOString()
   };
