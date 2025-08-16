@@ -196,6 +196,106 @@ async function syncOuraData(supabase: any, userId: string, accessToken: string) 
       }
     }
   }
+
+  // Fetch daily activity data for the last 2 days
+  console.log(`Fetching Oura daily activity data for user ${userId}`);
+  const activityResponse = await fetch(`https://api.ouraring.com/v2/usercollection/daily_activity?start_date=${yesterdayStr}&end_date=${todayStr}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (activityResponse.ok) {
+    const activityData = await activityResponse.json();
+    console.log(`Fetched ${activityData.data?.length || 0} daily activity records for user ${userId}`);
+    
+    // Process and store daily activity data
+    for (const day of activityData.data || []) {
+      const activityRecord = {
+        user_id: userId,
+        date: day.day,
+        activity_score: day.score,
+        steps: day.steps,
+        active_calories: day.active_calories,
+        total_calories: day.total_calories,
+        target_calories: day.target_calories,
+        equivalent_walking_distance: day.equivalent_walking_distance,
+        high_activity_minutes: day.high_activity_minutes,
+        medium_activity_minutes: day.medium_activity_minutes,
+        low_activity_minutes: day.low_activity_minutes,
+        non_wear_minutes: day.non_wear_minutes,
+        rest_minutes: day.rest_minutes,
+        inactive_minutes: day.inactive_minutes,
+        inactivity_alerts: day.inactivity_alerts,
+        average_met: day.average_met,
+        met_1min: day.met?.interval_data,
+        raw_data: day
+      };
+
+      // Upsert daily activity data
+      const { error: upsertError } = await supabase
+        .from("oura_daily_activity")
+        .upsert(activityRecord, {
+          onConflict: "user_id,date"
+        });
+
+      if (upsertError) {
+        console.error(`Error upserting daily activity data for user ${userId}, date ${day.day}:`, upsertError);
+      }
+    }
+  } else {
+    console.error(`Failed to fetch Oura daily activity data for user ${userId}: ${activityResponse.status}`);
+  }
+
+  // Fetch workout data for the last 7 days (workouts are less frequent)
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoStr = weekAgo.toISOString().split('T')[0];
+
+  console.log(`Fetching Oura workout data for user ${userId}`);
+  const workoutResponse = await fetch(`https://api.ouraring.com/v2/usercollection/workout?start_date=${weekAgoStr}&end_date=${todayStr}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (workoutResponse.ok) {
+    const workoutData = await workoutResponse.json();
+    console.log(`Fetched ${workoutData.data?.length || 0} workout records for user ${userId}`);
+    
+    // Process and store workout data
+    for (const workout of workoutData.data || []) {
+      const workoutRecord = {
+        user_id: userId,
+        external_id: workout.id,
+        activity: workout.activity,
+        start_datetime: workout.start_datetime,
+        end_datetime: workout.end_datetime,
+        intensity: workout.intensity,
+        load: workout.load,
+        average_heart_rate: workout.average_heart_rate,
+        max_heart_rate: workout.max_heart_rate,
+        calories: workout.calories,
+        day: workout.day,
+        raw_data: workout
+      };
+
+      // Upsert workout data
+      const { error: upsertError } = await supabase
+        .from("oura_workouts")
+        .upsert(workoutRecord, {
+          onConflict: "user_id,external_id"
+        });
+
+      if (upsertError) {
+        console.error(`Error upserting workout data for user ${userId}, workout ${workout.id}:`, upsertError);
+      }
+    }
+  } else {
+    console.error(`Failed to fetch Oura workout data for user ${userId}: ${workoutResponse.status}`);
+  }
 }
 
 async function refreshOuraToken(clientId: string, clientSecret: string, refreshToken: string): Promise<{ access_token: string; refresh_token?: string; expires_at?: string; }>{
