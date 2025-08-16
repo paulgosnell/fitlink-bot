@@ -52,26 +52,31 @@ serve(async (req) => {
           user = await getUserByTelegramId(supabase, telegramId);
         } catch (dbError) {
           console.error('Database error in getUserByTelegramId:', dbError);
-          throw new Error(`Database lookup failed: ${dbError.message}`);
+          throw new Error(`Step 1 - Database lookup failed: ${dbError.message}`);
         }
         
         if (!user) {
           console.error('User not found for Telegram ID:', telegramId);
-          throw new Error('User not found');
+          throw new Error(`Step 2 - User not found for Telegram ID: ${telegramId}`);
         }
         console.log('User found:', { id: user.id, telegram_id: user.telegram_id });
 
         // Store tokens in database
         console.log('Storing tokens in database...');
-        await createOrUpdateProvider(supabase, {
-          user_id: user.id,
-          provider: 'oura',
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expires_at: tokens.expires_at,
-          provider_user_id: tokens.user_id?.toString(),
-          scopes: ['email', 'personal', 'daily']
-        });
+        try {
+          await createOrUpdateProvider(supabase, {
+            user_id: user.id,
+            provider: 'oura',
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expires_at: tokens.expires_at,
+            provider_user_id: tokens.user_id?.toString(),
+            scopes: ['email', 'personal', 'daily']
+          });
+        } catch (providerError) {
+          console.error('Error in createOrUpdateProvider:', providerError);
+          throw new Error(`Step 3 - Provider creation failed: ${providerError.message}`);
+        }
 
         // Trigger initial data sync (last 7 days)
         console.log('Triggering initial Oura data sync...');
