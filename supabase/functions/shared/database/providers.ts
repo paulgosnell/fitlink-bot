@@ -91,60 +91,67 @@ export async function createOrUpdateProvider(
     provider_user_id_type: typeof encryptedData.provider_user_id
   });
 
-  // TEMPORARY FIX: Skip existing provider lookup to bypass bigint error
-  // TODO: Fix the underlying schema issue
-  console.log('DEBUG: TEMPORARILY SKIPPING PROVIDER LOOKUP - forcing new provider creation');
-  const existing = null; // Force new provider creation
-  
-  // Original code (commented out due to bigint error):
-  // const { data: existing, error: lookupError } = await supabase
-  //   .from('providers')
-  //   .select('id')
-  //   .eq('user_id', providerData.user_id)
-  //   .eq('provider', providerData.provider)
-  //   .single();
-  // 
-  // if (lookupError && lookupError.code !== 'PGRST116') {
-  //   console.error('DEBUG: Lookup error:', lookupError);
-  //   throw new Error(`Provider lookup failed: ${lookupError.message}`);
-  // }
-
-  // TEMPORARY FIX: Skip existing provider lookup to bypass bigint error
-  // Since existing is always null, we'll always create a new provider
-  console.log('DEBUG: TEMPORARILY SKIPPING PROVIDER LOOKUP - forcing new provider creation');
-  
-  // Force creation of new provider (skip update path entirely)
-  console.log('DEBUG: TAKING INSERT PATH - Creating new provider...');
-  console.log('DEBUG: Insert data structure:', JSON.stringify({
-    ...encryptedData,
-    is_active: true
-  }, null, 2));
-  
-  // Create new provider
-  const { data, error } = await supabase
+  // Try to update existing provider first
+  console.log('DEBUG: Checking for existing provider...');
+  const { data: existing, error: lookupError } = await supabase
     .from('providers')
-    .insert([{
-      ...encryptedData,
-      is_active: true
-    }])
-    .select()
+    .select('id')
+    .eq('user_id', providerData.user_id)
+    .eq('provider', providerData.provider)
     .single();
 
-  if (error) {
-    console.error('DEBUG: INSERT ERROR DETAILS:', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    });
-    throw new Error(`Create new provider failed: ${error.message}`);
+  if (lookupError && lookupError.code !== 'PGRST116') {
+    console.error('DEBUG: Lookup error:', lookupError);
+    throw new Error(`Provider lookup failed: ${lookupError.message}`);
   }
-  
-  return {
-    ...data,
-    access_token: providerData.access_token,
-    refresh_token: providerData.refresh_token
-  };
+
+  if (existing) {
+    console.log('DEBUG: Updating existing provider with ID:', existing.id);
+    // Update existing provider
+    const { data, error } = await supabase
+      .from('providers')
+      .update({
+        ...encryptedData,
+        is_active: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('DEBUG: Update error:', error);
+      throw error;
+    }
+    
+    return {
+      ...data,
+      access_token: providerData.access_token,
+      refresh_token: providerData.refresh_token
+    };
+  } else {
+    console.log('DEBUG: Creating new provider...');
+    // Create new provider
+    const { data, error } = await supabase
+      .from('providers')
+      .insert([{
+        ...encryptedData,
+        is_active: true
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('DEBUG: Insert error:', error);
+      throw error;
+    }
+    
+    return {
+      ...data,
+      access_token: providerData.access_token,
+      refresh_token: providerData.refresh_token
+    };
+  }
 }
 
 export async function updateProviderTokens(
