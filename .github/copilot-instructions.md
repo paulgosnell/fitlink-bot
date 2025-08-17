@@ -118,15 +118,33 @@ export default async (request, context) => {
       if (location) return Response.redirect(location, response.status);
     }
     
+    // For HTML responses, we need to read the body and set headers explicitly
+    const contentType = response.headers.get('Content-Type') || '';
     const body = await response.text();
+    
+    // Create new headers object
     const headers = new Headers();
     
-    // Fix Content-Type for HTML responses
-    if (body.trim().startsWith('<!DOCTYPE html>')) {
+    // Copy CORS headers
+    const corsHeaders = ['Access-Control-Allow-Origin', 'Access-Control-Allow-Headers'];
+    corsHeaders.forEach(header => {
+      const value = response.headers.get(header);
+      if (value) headers.set(header, value);
+    });
+    
+    // Set Content-Type explicitly
+    if (contentType.includes('text/html') || body.trim().startsWith('<!DOCTYPE html>')) {
       headers.set('Content-Type', 'text/html; charset=UTF-8');
+    } else {
+      headers.set('Content-Type', contentType || 'text/plain');
     }
     
-    return new Response(body, { status: response.status, headers });
+    headers.set('Cache-Control', 'no-cache');
+    
+    return new Response(body, {
+      status: response.status,
+      headers
+    });
   } catch (err) {
     return new Response(`Proxy error: ${err.message}`, { status: 500 });
   }
