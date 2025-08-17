@@ -118,29 +118,21 @@ serve(async (req) => {
         const activities: StravaActivity[] = await activitiesResp.json();
 
         for (const a of activities) {
-          const activityType = mapStravaType(a.type);
           const upsertRecord = {
             user_id: provider.user_id,
-            source: 'strava',
-            external_id: a.id.toString(),
-            activity_type: activityType,
+            activity_id: a.id,
             name: a.name,
-            start_time: a.start_date,
-            duration_seconds: a.moving_time,
-            distance_meters: a.distance,
-            elevation_gain_meters: a.total_elevation_gain ?? null,
-            average_heart_rate: a.average_heartrate ?? null,
-            max_heart_rate: a.max_heartrate ?? null,
-            average_power: a.average_watts ?? null,
-            weighted_power: (a as any).weighted_average_watts ?? null,
-            tss_estimated: null,
-            intensity_factor: null,
-            raw_data: a
+            activity_type: a.type,
+            start_date: a.start_date,
+            moving_time: a.moving_time,
+            elapsed_time: a.moving_time, // Use moving_time for elapsed_time
+            distance: a.distance,
+            total_elevation_gain: a.total_elevation_gain ?? null
           };
 
           const { error: upsertError } = await supabase
-            .from('activities')
-            .upsert(upsertRecord, { onConflict: 'user_id,source,external_id' });
+            .from('strava_activities')
+            .upsert(upsertRecord, { onConflict: 'activity_id' });
 
           if (upsertError) {
             console.error(`Error upserting Strava activity ${a.id} for user ${provider.user_id}:`, upsertError);
@@ -169,16 +161,6 @@ serve(async (req) => {
     });
   }
 });
-
-function mapStravaType(type: string): 'run' | 'ride' | 'swim' | 'walk' | 'hike' | 'other' {
-  const t = (type || '').toLowerCase();
-  if (t === 'run') return 'run';
-  if (t === 'ride' || t === 'virtualride' || t === 'gravelride' || t === 'mtb') return 'ride';
-  if (t === 'swim') return 'swim';
-  if (t === 'walk') return 'walk';
-  if (t === 'hike') return 'hike';
-  return 'other';
-}
 
 async function refreshStravaToken(clientId: string, clientSecret: string, refreshToken: string): Promise<{ access_token: string; refresh_token?: string; expires_at?: string; }>{
   const resp = await fetch('https://www.strava.com/oauth/token', {

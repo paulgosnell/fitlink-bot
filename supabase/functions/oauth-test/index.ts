@@ -75,7 +75,7 @@ serve(async (req) => {
       // Get user's health data and providers
       console.log('DEBUG: Fetching health data for user:', user.id);
       
-            const [sleepData, activityData, dailyActivityData, workoutData, providers] = await Promise.all([
+      const [sleepData, activityData, dailyActivityData, workoutData, stravaActivities, providers] = await Promise.all([
         supabase
           .from('oura_sleep')
           .select('*')
@@ -105,6 +105,13 @@ serve(async (req) => {
           .order('start_datetime', { ascending: false })
           .limit(50),
         supabase
+          .from('strava_activities')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('start_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .order('start_date', { ascending: false })
+          .limit(50),
+        supabase
           .from('providers')
           .select('provider, is_active, created_at, updated_at')
           .eq('user_id', user.id)
@@ -119,6 +126,8 @@ serve(async (req) => {
         daily_activity_error: dailyActivityData.error?.message,
         workout_count: workoutData.data?.length || 0,
         workout_error: workoutData.error?.message,
+        strava_activity_count: stravaActivities.data?.length || 0,
+        strava_activity_error: stravaActivities.error?.message,
         provider_count: providers.data?.length || 0,
         provider_error: providers.error?.message
       });      return new Response(JSON.stringify({
@@ -137,6 +146,7 @@ serve(async (req) => {
         activities: activityData.data || [],
         oura_daily_activity: dailyActivityData.data || [],
         oura_workouts: workoutData.data || [],
+        strava_activities: stravaActivities.data || [],
         providers: providers.data || [],
         debug_info: {
           lookup_method: 'telegram_id_direct',
@@ -147,6 +157,7 @@ serve(async (req) => {
             activities: activityData.data?.length || 0,
             oura_daily_activity: dailyActivityData.data?.length || 0,
             oura_workouts: workoutData.data?.length || 0,
+            strava_activities: stravaActivities.data?.length || 0,
             providers: providers.data?.length || 0
           }
         }
