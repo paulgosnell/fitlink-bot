@@ -499,6 +499,59 @@ async function handleCommand(
     case "/status":
       await handleStatusCommand(chatId, userId, supabase, botToken);
       break;
+    case "/help":
+      await handleHelpCommand(chatId, userId, supabase, botToken);
+      break;
+    case "/settings":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "⚙️ Settings management is available through the /start menu. Use /start to access connection settings and preferences."
+      );
+      break;
+    case "/dashboard":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "📊 Dashboard access is available through the /start menu. Use /start to access your health analytics dashboard."
+      );
+      break;
+    case "/deepbrief":
+    case "/deep":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "🧠 Deep analysis is available through the /start menu. Use /start to access your 30-day health trend analysis."
+      );
+      break;
+    case "/pause":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "⏸️ Pause functionality is available through the /start menu. Use /start to manage your briefing schedule."
+      );
+      break;
+    case "/resume":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "▶️ Resume functionality is available through the /start menu. Use /start to manage your briefing schedule."
+      );
+      break;
+    case "/delete":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "🗑️ Data deletion is available through the /start menu. Use /start to access account management options."
+      );
+      break;
+    case "/feedback":
+      await sendTelegramMessage(
+        botToken,
+        chatId,
+        "💬 Feedback submission is available through the /start menu. Use /start to send us your thoughts and suggestions."
+      );
+      break;
     default:
       // Route to help for unknown slash commands
       if (cmd.startsWith('/')) {
@@ -1248,4 +1301,50 @@ ${actionMessages.join("\n")}`;
     console.error("Error checking status:", error);
     await sendTelegramMessage(botToken, chatId, "❌ Error checking device status.");
   }
+}
+
+async function handleHelpCommand(
+  chatId: number,
+  userId: number,
+  supabase: any,
+  botToken: string
+): Promise<void> {
+  const helpMessage = `🤖 **Fitlink Bot Help**
+
+**Commands:**
+• /start - Get started and see main menu
+• /brief - Get your daily briefing now
+• /deepbrief - Deep health analysis (30-day trends)
+• /dashboard - Access your web analytics dashboard
+• /settings - Manage connections and preferences
+• /feedback - Send feedback to our team
+• /pause [days] - Pause daily briefings (default: 7 days)
+• /resume - Resume daily briefings
+• /help - Show this help message
+• /delete - Delete all your data
+• /status - Check device connection status
+• /connect_oura - Connect your Oura Ring
+• /connect_strava - Connect your Strava account
+
+**Data Sources:**
+• 🔗 **Oura Ring**: Sleep duration, efficiency, HRV, readiness score
+• 🚴 **Strava**: Recent activities, training load estimation
+• 🌤️ **Weather**: Local conditions, best exercise windows
+
+**Daily Briefings:**
+Your personalised morning briefing includes:
+• Sleep quality and recovery status
+• Training load vs. your averages
+• Today's weather and exercise recommendations
+• Specific action items (hydration, recovery, etc.)
+
+**Privacy:**
+• Your data is encrypted and never shared
+• Connect/disconnect accounts anytime
+• Full data deletion available with /delete
+
+**Support:**
+Having issues? The bot logs errors automatically, but you can also provide feedback using the 👍👎 buttons on briefings.`;
+
+  await sendTelegramMessage(botToken, chatId, helpMessage);
 }
