@@ -63,11 +63,16 @@ export async function generateBriefing(
   userId: string,
   supabase: SupabaseClient
 ): Promise<BriefingResult> {
+  console.log("🚀 generateBriefing: Starting for user", userId);
+  
   try {
     // Gather all user data
+    console.log("🔍 generateBriefing: About to gather context...");
     const context = await gatherBriefingContext(userId, supabase);
+    console.log("🔍 generateBriefing: Context gathered successfully");
     
     if (!context.user) {
+      console.error("❌ generateBriefing: User not found");
       return { error: "User not found" };
     }
 
@@ -76,41 +81,24 @@ export async function generateBriefing(
     const hasActivities = context.training?.last_activity_date;
     const hasWeather = context.weather?.date;
 
-    // DEBUG: Log what data we actually have
-    console.log("🔍 BRIEFING DEBUG DATA CHECK:");
-    console.log("User ID:", userId);
-    console.log("Sleep data:", context.sleep ? {
-      last_sleep_date: context.sleep.last_sleep_date,
-      total_sleep_minutes: context.sleep.total_sleep_minutes,
-      sleep_efficiency: context.sleep.sleep_efficiency,
-      hrv_avg: context.sleep.hrv_avg
-    } : "NO SLEEP DATA");
-    console.log("Training data:", context.training ? {
-      last_activity_date: context.training.last_activity_date,
-      current_week_sessions: context.training.current_week_sessions,
-      current_week_tss: context.training.current_week_tss
-    } : "NO TRAINING DATA");
-    console.log("Weather data:", context.weather ? {
-      date: context.weather.date,
-      city: context.weather.city,
-      temp_max_c: context.weather.temp_max_c
-    } : "NO WEATHER DATA");
-    console.log("hasSleep:", !!hasSleep, "hasActivities:", !!hasActivities, "hasWeather:", !!hasWeather);
-
     if (!hasSleep && !hasActivities && !hasWeather) {
-      console.log("❌ ALL DATA SOURCES MISSING - returning no data error");
       return { 
         error: "No data available. Please connect your Oura Ring and/or Strava account to get personalized briefings." 
       };
     }
 
     // Generate AI briefing
+    console.log("🔍 generateBriefing: About to generate AI briefing...");
     const aiResponse = await generateAIBriefing(context);
+    console.log("🔍 generateBriefing: AI briefing generated successfully");
     
     // Format the briefing message
+    console.log("🔍 generateBriefing: Formatting briefing message...");
     const briefingMessage = formatBriefingMessage(context, aiResponse);
+    console.log("🔍 generateBriefing: Message formatted successfully");
     
     // Log the briefing
+    console.log("🔍 generateBriefing: Logging briefing...");
     await logBriefing(userId, supabase, {
       headline: aiResponse.headline,
       sleep_insight: aiResponse.sleep_insight,
@@ -132,8 +120,10 @@ export async function generateBriefing(
     };
 
   } catch (error) {
-    console.error("Error generating briefing:", error);
-    return { error: "Failed to generate briefing. Please try again." };
+    console.error("❌ generateBriefing: Error occurred:", error);
+    console.error("❌ generateBriefing: Error message:", error?.message);
+    console.error("❌ generateBriefing: Error stack:", error?.stack);
+    return { error: `Failed to generate briefing: ${error?.message || 'Unknown error'}` };
   }
 }
 
@@ -143,43 +133,43 @@ async function gatherBriefingContext(
 ): Promise<BriefingContext> {
   console.log("🔍 gatherBriefingContext: Starting data gathering for user", userId);
   
-  const [user, sleep, training, weather, recentActivities, ouraData] = await Promise.all([
-    getUserById(supabase, userId),
-    getSleepTrends(supabase, userId),
-    getTrainingLoad(supabase, userId),
-    getTodaysWeather(supabase, userId),
-    getRecentActivities(supabase, userId, 3),
-    getComprehensiveOuraData(supabase, userId)
-  ]);
+  try {
+    const [user, sleep, training, weather, recentActivities, ouraData] = await Promise.all([
+      getUserById(supabase, userId),
+      getSleepTrends(supabase, userId),
+      getTrainingLoad(supabase, userId),
+      getTodaysWeather(supabase, userId),
+      getRecentActivities(supabase, userId, 3),
+      getComprehensiveOuraData(supabase, userId)
+    ]);
 
-  console.log("🔍 gatherBriefingContext: Data gathering complete");
-  console.log("User found:", !!user, user ? `(${user.first_name})` : "");
-  console.log("Sleep data:", !!sleep);
-  console.log("Training data:", !!training);
-  console.log("Weather data:", !!weather);
-  console.log("Recent activities:", recentActivities?.length || 0);
-  console.log("Oura comprehensive:", !!ouraData);
+    console.log("🔍 gatherBriefingContext: Data gathering complete");
+    console.log("User found:", !!user, user ? `(${user.first_name})` : "");
+    console.log("Sleep data:", !!sleep);
+    console.log("Training data:", !!training);
+    console.log("Weather data:", !!weather);
+    console.log("Recent activities:", recentActivities?.length || 0);
+    console.log("Oura comprehensive:", !!ouraData);
 
-  return {
-    user: user!,
-    sleep,
-    training,
-    weather,
-    last_activities: recentActivities,
-    oura_comprehensive: ouraData
-  };
-}
+    return {
+      user: user!,
+      sleep,
+      training,
+      weather,
+      last_activities: recentActivities,
+      oura_comprehensive: ouraData
+    };
+  } catch (error) {
+    console.error("❌ gatherBriefingContext: Error during data gathering:", error);
+    throw error;
+  }
 
 async function getSleepTrends(supabase: SupabaseClient, userId: string) {
-  console.log("🔍 getSleepTrends: Starting for user", userId);
-  
   const { data, error } = await supabase
     .from('sleep_recent_view')
     .select('*')
     .eq('user_id', userId)
     .single();
-
-  console.log("🔍 getSleepTrends: sleep_recent_view query result:", { data, error });
 
   if (error) {
     console.warn("No sleep data found in view, trying direct table query:", error);
@@ -193,8 +183,6 @@ async function getSleepTrends(supabase: SupabaseClient, userId: string) {
       .limit(1)
       .single();
     
-    console.log("🔍 getSleepTrends: oura_sleep direct query result:", { directData, directError });
-    
     if (directError) {
       console.warn("No sleep data found in direct table query:", directError);
       return undefined;
@@ -206,23 +194,19 @@ async function getSleepTrends(supabase: SupabaseClient, userId: string) {
     return {
       user_id: userId,
       last_sleep_date: directData.date,
-      // Convert from your actual schema (duration in numeric) to expected minutes
-      total_sleep_minutes: directData.total_sleep_duration ? Math.round(directData.total_sleep_duration * 60) : null,
-      deep_sleep_minutes: directData.deep_sleep_duration ? Math.round(directData.deep_sleep_duration * 60) : null,
-      light_sleep_minutes: directData.light_sleep_duration ? Math.round(directData.light_sleep_duration * 60) : null,
-      rem_sleep_minutes: directData.rem_sleep_duration ? Math.round(directData.rem_sleep_duration * 60) : null,
-      sleep_efficiency: directData.sleep_score, // Map sleep_score to sleep_efficiency
-      hrv_avg: null, // Not available in your schema
-      resting_heart_rate: null, // Not available in your schema
-      temperature_deviation: null, // Not available in your schema  
-      readiness_score: directData.sleep_score, // Use sleep_score as readiness
+      total_sleep_minutes: directData.total_sleep_minutes,
+      sleep_efficiency: directData.sleep_efficiency,
+      hrv_avg: directData.hrv_avg,
+      resting_heart_rate: directData.resting_heart_rate,
+      temperature_deviation: directData.temperature_deviation,
+      readiness_score: directData.readiness_score,
       // Set averages to current values as fallback
-      avg_sleep_minutes: directData.total_sleep_duration ? Math.round(directData.total_sleep_duration * 60) : null,
-      avg_sleep_efficiency: directData.sleep_score,
-      avg_hrv: null,
-      avg_rhr: null,
-      avg_temp_dev: null,
-      avg_readiness: directData.sleep_score,
+      avg_sleep_minutes: directData.total_sleep_minutes,
+      avg_sleep_efficiency: directData.sleep_efficiency,
+      avg_hrv: directData.hrv_avg,
+      avg_rhr: directData.resting_heart_rate,
+      avg_temp_dev: directData.temperature_deviation,
+      avg_readiness: directData.readiness_score,
       hrv_trend: 'stable',
       rhr_trend: 'stable',
       readiness_change: 0
@@ -406,185 +390,54 @@ async function getComprehensiveOuraData(supabase: SupabaseClient, userId: string
 }
 
 async function getTrainingLoad(supabase: SupabaseClient, userId: string) {
-  console.log("🔍 getTrainingLoad: Starting for user", userId);
-  
-  // Since weekly_load_view won't work with your schema, let's query directly
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  
-  const { data: activities, error } = await supabase
-    .from('strava_activities')
+  const { data, error } = await supabase
+    .from('weekly_load_view')
     .select('*')
     .eq('user_id', userId)
-    .gte('start_date', oneWeekAgo.toISOString())
-    .order('start_date', { ascending: false });
-
-  console.log("🔍 getTrainingLoad: strava_activities query result:", { 
-    count: activities?.length, 
-    error,
-    dateRange: `${oneWeekAgo.toISOString().split('T')[0]} to now`
-  });
+    .single();
 
   if (error) {
     console.warn("No training data found:", error);
     return undefined;
   }
 
-  if (!activities || activities.length === 0) {
-    console.log("🔍 getTrainingLoad: No activities found in last 7 days");
-    return undefined;
-  }
-
-  // Calculate basic training metrics from your actual data
-  const currentWeekSessions = activities.length;
-  const currentWeekDuration = activities.reduce((sum, a) => sum + (a.moving_time || 0), 0);
-  const currentWeekDistance = activities.reduce((sum, a) => sum + (a.distance || 0), 0);
-  const lastActivityDate = activities[0]?.start_date;
-
-  const trainingData = {
-    user_id: userId,
-    current_week_sessions: currentWeekSessions,
-    current_week_duration_seconds: currentWeekDuration,
-    current_week_distance_meters: Math.round(currentWeekDistance),
-    current_week_tss: 0,  // Not available in your schema
-    avg_weekly_sessions: currentWeekSessions,  // Use current as average for now
-    avg_weekly_duration_seconds: currentWeekDuration,
-    avg_weekly_tss: 0,
-    last_activity_date: lastActivityDate,
-    load_change_percent: 0
-  };
-
-  console.log("🔍 getTrainingLoad: Calculated training data:", trainingData);
-  
-  return trainingData;
+  return data;
 }
 
 async function getTodaysWeather(supabase: SupabaseClient, userId: string) {
-  console.log("🔍 getTodaysWeather: Starting for user", userId);
-  
-  // First get the telegram_id for this user since env_daily uses bigint user_id
-  const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('telegram_id')
-    .eq('id', userId)
-    .single();
-    
-  if (userError || !user) {
-    console.warn("Could not find user to get telegram_id:", userError);
-    return undefined;
-  }
-  
-  const today = new Date().toISOString().split('T')[0];
-  
   const { data, error } = await supabase
-    .from('env_daily')  // Use your actual table name
+    .from('todays_conditions_view')
     .select('*')
-    .eq('user_id', user.telegram_id)  // Use telegram_id for bigint user_id column
-    .eq('date', today)
+    .eq('user_id', userId)
     .single();
-
-  console.log("🔍 getTodaysWeather: env_daily query result:", { 
-    telegram_id: user.telegram_id,
-    data: !!data, 
-    error 
-  });
 
   if (error) {
     console.warn("No weather data found:", error);
     return undefined;
   }
 
-  if (!data) {
-    console.log("🔍 getTodaysWeather: No weather data for today");
-    return undefined;
-  }
-
-  // Transform to expected format
-  const weatherData = {
-    user_id: userId,  // Return the UUID for consistency with other functions
-    date: data.date,
-    city: data.city,
-    temp_min_c: data.temp_min_c,
-    temp_max_c: data.temp_max_c,
-    humidity_percent: data.humidity_percent,
-    wind_kph: data.wind_kph,
-    precipitation_mm: data.precipitation_mm,
-    air_quality_index: data.air_quality_index,
-    sunrise_time: data.sunrise_time,
-    sunset_time: data.sunset_time,
-    weather_description: data.weather_description,
-    best_exercise_windows: data.best_exercise_windows,
-    exercise_conditions: calculateExerciseConditions(data)
-  };
-
-  console.log("🔍 getTodaysWeather: Transformed weather data:", weatherData);
-  
-  return weatherData;
-}
-
-function calculateExerciseConditions(weather: any): string {
-  if (weather.temp_max_c >= 10 && weather.temp_max_c <= 25 
-      && weather.wind_kph < 20 
-      && weather.precipitation_mm < 1) {
-    return 'excellent';
-  }
-  if (weather.temp_max_c >= 5 && weather.temp_max_c <= 30 
-      && weather.wind_kph < 30 
-      && weather.precipitation_mm < 5) {
-    return 'good';
-  }
-  if (weather.precipitation_mm > 10 || weather.wind_kph > 40) {
-    return 'poor';
-  }
-  return 'fair';
+  return data;
 }
 
 async function getRecentActivities(supabase: SupabaseClient, userId: string, limit: number) {
-  console.log("🔍 getRecentActivities: Starting for user", userId);
-  
   const { data, error } = await supabase
-    .from('strava_activities')  // Use your actual table name
+    .from('activities')
     .select('*')
     .eq('user_id', userId)
-    .order('start_date', { ascending: false })  // Use your actual column name
+    .order('start_time', { ascending: false })
     .limit(limit);
-
-  console.log("🔍 getRecentActivities: strava_activities query result:", { data: data?.length, error });
 
   if (error) {
     console.warn("No recent activities found:", error);
     return [];
   }
 
-  // Transform to expected format
-  const transformedData = (data || []).map(activity => ({
-    id: activity.id,
-    user_id: activity.user_id,
-    source: 'strava',
-    external_id: activity.activity_id.toString(),
-    activity_type: activity.activity_type,
-    name: activity.name,
-    start_time: activity.start_date,  // Map start_date to start_time
-    duration_seconds: activity.moving_time,  // Map moving_time to duration_seconds
-    distance_meters: activity.distance ? Math.round(activity.distance) : null,
-    elevation_gain_meters: activity.total_elevation_gain,
-    average_heart_rate: null,  // Not available in your schema
-    max_heart_rate: null,      // Not available in your schema
-    average_power: null,       // Not available in your schema
-    weighted_power: null,      // Not available in your schema
-    tss_estimated: null,       // Not available in your schema
-    intensity_factor: null,    // Not available in your schema
-    raw_data: {},
-    created_at: activity.created_at
-  }));
-
-  return transformedData;
+  return data || [];
 }
 
 async function generateAIBriefing(context: BriefingContext): Promise<AIBriefingResponse> {
-  // Use globalThis to access Deno in Edge Functions environment
-  const anthropicKey = (globalThis as any).Deno?.env?.get('ANTHROPIC_API_KEY');
-  const openaiKey = (globalThis as any).Deno?.env?.get('OPENAI_API_KEY');
+  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+  const openaiKey = Deno.env.get('OPENAI_API_KEY');
   
   if (anthropicKey) {
     return generateClaudeBriefing(context, anthropicKey);
@@ -660,9 +513,8 @@ async function generateClaudeBriefing(context: BriefingContext, apiKey: string):
 }
 
 async function generateDeepAIBriefing(healthSummary: HealthSummary): Promise<AIBriefingResponse> {
-  // Use globalThis to access Deno in Edge Functions environment
-  const anthropicKey = (globalThis as any).Deno?.env?.get('ANTHROPIC_API_KEY');
-  const openaiKey = (globalThis as any).Deno?.env?.get('OPENAI_API_KEY');
+  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+  const openaiKey = Deno.env.get('OPENAI_API_KEY');
   
   if (anthropicKey) {
     return generateClaudeDeepBriefing(healthSummary, anthropicKey);
@@ -947,7 +799,7 @@ function formatNarrativeBriefingMessage(healthSummary: HealthSummary, ai: AIBrie
   
   if (predictive_flags.illness_risk === 'high' || predictive_flags.overtraining_risk === 'high') {
     message += `🛡️ **Early Warning:** `;
-    const warnings: string[] = [];
+    const warnings = [];
     if (predictive_flags.illness_risk === 'high') warnings.push('illness signals detected');
     if (predictive_flags.overtraining_risk === 'high') warnings.push('overtraining risk elevated');
     message += warnings.join(', ') + '\n\n';
