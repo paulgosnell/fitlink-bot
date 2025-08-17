@@ -492,6 +492,7 @@ async function handleCommand(
       await handleDisconnectStrava(chatId, userId, supabase, botToken);
       break;
     case "/briefing":
+    case "/brief":
       await handleBriefingCommand(chatId, userId, supabase, botToken);
       break;
     case "/status":
@@ -1152,13 +1153,10 @@ async function handleBriefingCommand(
   try {
     await sendTelegramMessage(botToken, chatId, "🔄 Generating your daily briefing...");
     
-    // Import AI module dynamically
-    const { generateHealthBriefing } = await import("./ai.ts");
+    // Import the new briefing module
+    const { generateBriefing } = await import("./ai/briefing.ts");
     
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Fetch user's data
+    // Get the user UUID from telegram_id
     const { data: user } = await supabase
       .from("users")
       .select("id")
@@ -1170,70 +1168,28 @@ async function handleBriefingCommand(
       return;
     }
 
-    // Fetch sleep data
-    const { data: sleepData } = await supabase
-      .from("oura_sleep")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("date", today)
-      .single();
-
-    // Fetch activity data
-    const { data: activityData } = await supabase
-      .from("activities")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("date", today);
-
-    // Fetch weather data
-    const { data: weatherData } = await supabase
-      .from("env_daily")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("date", today)
-      .single();
-
-    // Prepare data for AI
-    const healthData = {
-      date: today,
-      sleep: sleepData ? {
-        duration: sleepData.duration,
-        efficiency: sleepData.efficiency,
-        score: sleepData.score,
-        bedtime: sleepData.bedtime_start,
-      } : undefined,
-      activity: activityData || [],
-      weather: weatherData ? {
-        temperature: weatherData.temperature,
-        condition: weatherData.condition,
-        humidity: weatherData.humidity,
-      } : undefined,
-    };
-
-    // Generate briefing
-    const briefing = await generateHealthBriefing(healthData);
+    // Generate the briefing using the new function
+    const briefingResult = await generateBriefing(user.id, supabase);
     
-    // Save briefing
-    await supabase
-      .from("briefings")
-      .upsert({
-        user_id: user.id,
-        date: today,
-        content: briefing,
-        data_sources: healthData,
-      }, {
-        onConflict: "user_id,date"
-      });
+    if (briefingResult.error) {
+      await sendTelegramMessage(botToken, chatId, `❌ ${briefingResult.error}`);
+      return;
+    }
 
-    await sendTelegramMessage(botToken, chatId, `📊 *Your Daily Health Briefing*\n\n${briefing}`);
-    
+    if (briefingResult.message) {
+      await sendTelegramMessage(
+        botToken, 
+        chatId, 
+        briefingResult.message,
+        briefingResult.keyboard
+      );
+    } else {
+      await sendTelegramMessage(botToken, chatId, "❌ Failed to generate briefing. Please try again.");
+    }
+
   } catch (error) {
     console.error("Error generating briefing:", error);
-    await sendTelegramMessage(
-      botToken,
-      chatId,
-      "❌ Sorry, I couldn't generate your briefing right now. Please try again later."
-    );
+    await sendTelegramMessage(botToken, chatId, "❌ Failed to generate briefing. Please try again later.");
   }
 }
 
