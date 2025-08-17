@@ -97,37 +97,6 @@ export async function generateBriefing(
     } : "NO WEATHER DATA");
     console.log("hasSleep:", !!hasSleep, "hasActivities:", !!hasActivities, "hasWeather:", !!hasWeather);
 
-    // FORCE BRIEFING FOR DEBUGGING - REMOVE WHEN FIXED
-    if (!hasSleep && !hasActivities && !hasWeather) {
-      console.log("❌ ALL DATA SOURCES MISSING");
-      console.log("🔧 FORCING BRIEFING ANYWAY FOR DEBUG PURPOSES");
-      
-      // Generate AI briefing with empty context for debugging
-      const aiResponse = await generateAIBriefing({
-        user: context.user,
-        sleep: undefined,
-        training: undefined,
-        weather: undefined,
-        last_activities: undefined,
-        oura_comprehensive: undefined
-      });
-      
-      // Format the briefing message
-      const briefingMessage = formatBriefingMessage({
-        user: context.user,
-        sleep: undefined,
-        training: undefined,
-        weather: undefined,
-        last_activities: undefined,
-        oura_comprehensive: undefined
-      }, aiResponse);
-      
-      return {
-        message: briefingMessage + "\n\n🔧 DEBUG: This briefing was generated with no data for testing purposes.",
-        keyboard: createBriefingKeyboard()
-      };
-    }
-
     if (!hasSleep && !hasActivities && !hasWeather) {
       console.log("❌ ALL DATA SOURCES MISSING - returning no data error");
       return { 
@@ -613,8 +582,9 @@ async function getRecentActivities(supabase: SupabaseClient, userId: string, lim
 }
 
 async function generateAIBriefing(context: BriefingContext): Promise<AIBriefingResponse> {
-  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
-  const openaiKey = Deno.env.get('OPENAI_API_KEY');
+  // Use globalThis to access Deno in Edge Functions environment
+  const anthropicKey = (globalThis as any).Deno?.env?.get('ANTHROPIC_API_KEY');
+  const openaiKey = (globalThis as any).Deno?.env?.get('OPENAI_API_KEY');
   
   if (anthropicKey) {
     return generateClaudeBriefing(context, anthropicKey);
@@ -690,8 +660,9 @@ async function generateClaudeBriefing(context: BriefingContext, apiKey: string):
 }
 
 async function generateDeepAIBriefing(healthSummary: HealthSummary): Promise<AIBriefingResponse> {
-  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
-  const openaiKey = Deno.env.get('OPENAI_API_KEY');
+  // Use globalThis to access Deno in Edge Functions environment
+  const anthropicKey = (globalThis as any).Deno?.env?.get('ANTHROPIC_API_KEY');
+  const openaiKey = (globalThis as any).Deno?.env?.get('OPENAI_API_KEY');
   
   if (anthropicKey) {
     return generateClaudeDeepBriefing(healthSummary, anthropicKey);
@@ -976,7 +947,7 @@ function formatNarrativeBriefingMessage(healthSummary: HealthSummary, ai: AIBrie
   
   if (predictive_flags.illness_risk === 'high' || predictive_flags.overtraining_risk === 'high') {
     message += `🛡️ **Early Warning:** `;
-    const warnings = [];
+    const warnings: string[] = [];
     if (predictive_flags.illness_risk === 'high') warnings.push('illness signals detected');
     if (predictive_flags.overtraining_risk === 'high') warnings.push('overtraining risk elevated');
     message += warnings.join(', ') + '\n\n';
