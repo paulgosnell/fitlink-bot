@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { generateBriefing } from "./ai/briefing.ts";
 
 export interface TelegramUpdate {
   update_id: number;
@@ -493,8 +494,7 @@ async function handleCommand(
       break;
     case "/briefing":
     case "/brief":
-      // Temporarily disabled for debugging
-      await sendTelegramMessage(botToken, chatId, "🔧 Briefing function temporarily disabled for debugging. Please try again later.");
+      await handleBriefingCommand(chatId, userId, supabase, botToken);
       break;
     case "/status":
       await handleStatusCommand(chatId, userId, supabase, botToken);
@@ -1154,9 +1154,6 @@ async function handleBriefingCommand(
   try {
     await sendTelegramMessage(botToken, chatId, "🔄 Generating your daily briefing...");
     
-    // Import the new briefing module
-    const { generateBriefing } = await import("./ai/briefing.ts");
-    
     // Get the user UUID from telegram_id
     const { data: user } = await supabase
       .from("users")
@@ -1169,7 +1166,7 @@ async function handleBriefingCommand(
       return;
     }
 
-    // Generate the briefing using the new function
+    // Generate the briefing using the imported function
     const briefingResult = await generateBriefing(user.id, supabase);
     
     if (briefingResult.error) {
