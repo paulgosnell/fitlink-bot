@@ -97,6 +97,37 @@ export async function generateBriefing(
     } : "NO WEATHER DATA");
     console.log("hasSleep:", !!hasSleep, "hasActivities:", !!hasActivities, "hasWeather:", !!hasWeather);
 
+    // FORCE BRIEFING FOR DEBUGGING - REMOVE WHEN FIXED
+    if (!hasSleep && !hasActivities && !hasWeather) {
+      console.log("❌ ALL DATA SOURCES MISSING");
+      console.log("🔧 FORCING BRIEFING ANYWAY FOR DEBUG PURPOSES");
+      
+      // Generate AI briefing with empty context for debugging
+      const aiResponse = await generateAIBriefing({
+        user: context.user,
+        sleep: undefined,
+        training: undefined,
+        weather: undefined,
+        last_activities: undefined,
+        oura_comprehensive: undefined
+      });
+      
+      // Format the briefing message
+      const briefingMessage = formatBriefingMessage({
+        user: context.user,
+        sleep: undefined,
+        training: undefined,
+        weather: undefined,
+        last_activities: undefined,
+        oura_comprehensive: undefined
+      }, aiResponse);
+      
+      return {
+        message: briefingMessage + "\n\n🔧 DEBUG: This briefing was generated with no data for testing purposes.",
+        keyboard: createBriefingKeyboard()
+      };
+    }
+
     if (!hasSleep && !hasActivities && !hasWeather) {
       console.log("❌ ALL DATA SOURCES MISSING - returning no data error");
       return { 
