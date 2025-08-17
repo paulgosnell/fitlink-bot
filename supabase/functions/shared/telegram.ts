@@ -493,7 +493,8 @@ async function handleCommand(
       break;
     case "/briefing":
     case "/brief":
-      await handleBriefingCommand(chatId, userId, supabase, botToken);
+      // Temporarily disabled for debugging
+      await sendTelegramMessage(botToken, chatId, "🔧 Briefing function temporarily disabled for debugging. Please try again later.");
       break;
     case "/status":
       await handleStatusCommand(chatId, userId, supabase, botToken);
