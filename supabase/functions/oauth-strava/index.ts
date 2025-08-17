@@ -57,7 +57,7 @@ serve(async (req) => {
           refresh_token: tokens.refresh_token,
           expires_at: tokens.expires_at,
           provider_user_id: tokens.athlete?.id?.toString(),
-          scopes: ['read', 'activity:read_all']
+          scopes: ['read', 'activity:read', 'activity:read_all']
         });
 
         // Trigger initial data sync (last 7 days)
@@ -177,7 +177,7 @@ serve(async (req) => {
         client_id: clientId,
         response_type: 'code',
         redirect_uri: redirectUri,
-        scope: 'read,activity:read_all',
+        scope: 'read,activity:read,activity:read_all',
         state,
         approval_prompt: 'auto',
       });
