@@ -1009,3 +1009,4 @@ async function logBriefing(
     console.error("Error logging briefing:", error);
   }
 }
+}
